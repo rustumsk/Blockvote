@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  phone         String?
+  role          Role      @default(VOTER)
+  status        Status    @default(PENDING)
+  walletAddress String?   @unique
+  isVerified    Boolean   @default(false)
+  verifyToken   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  votes         Vote[]
+}
+
+model Election {
+  id                 String          @id @default(uuid())
+  title              String
+  description        String
+  startDate          DateTime
+  endDate            DateTime
+  status             ElectionStatus  @default(UPCOMING)
+  contractElectionId Int?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  candidates         Candidate[]
+  votes              Vote[]
+}
+
+model Candidate {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String?
+  electionId          String
+  contractCandidateId Int?
+  createdAt           DateTime @default(now())
+  election            Election @relation(fields: [electionId], references: [id])
+  votes               Vote[]
+}
+
+model Vote {
+  id          String    @id @default(uuid())
+  userId      String
+  electionId  String
+  candidateId String
+  txHash      String    @unique
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  election    Election  @relation(fields: [electionId], references: [id])
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+
+  @@unique([userId, electionId])
+}
+
+enum Role {
+  ADMIN
+  VOTER
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ElectionStatus {
+  UPCOMING
+  ACTIVE
+  CLOSED
+  PAUSED
+}

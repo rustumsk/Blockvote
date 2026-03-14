@@ -1,0 +1,13 @@
+import { Router } from 'express'
+import { authenticate } from '../../middleware/auth'
+import { authController } from './auth.controller'
+
+const router = Router()
+
+router.post('/register', authController.register.bind(authController))
+router.get('/verify-email', authController.verifyEmail.bind(authController))
+router.post('/login', authController.login.bind(authController))
+router.get('/me', authenticate, authController.me.bind(authController))
+router.patch('/wallet', authenticate, authController.updateWallet.bind(authController))
+
+export default router
