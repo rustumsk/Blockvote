@@ -127,3 +127,66 @@ export const usersApi = {
     })
   },
 }
+
+export type ElectionStatus = 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+
+export type ElectionListItem = {
+  id: string
+  title: string
+  description: string
+  startDate: string
+  endDate: string
+  status: ElectionStatus
+  contractElectionId?: number | null
+  createdAt?: string
+  updatedAt?: string
+  candidateCount: number
+}
+
+export type Candidate = {
+  id: string
+  name: string
+  description?: string | null
+  electionId: string
+  contractCandidateId?: number | null
+  createdAt?: string
+}
+
+export type ElectionDetail = ElectionListItem & {
+  candidates: Candidate[]
+}
+
+export const electionsApi = {
+  getList(params?: { status?: string }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    const qs = sp.toString()
+    return api<ElectionListItem[]>(`/api/elections${qs ? `?${qs}` : ''}`)
+  },
+
+  getById(id: string) {
+    return api<ElectionDetail>(`/api/elections/${id}`)
+  },
+
+  create(body: { title: string; description: string; startDate: string; endDate: string }) {
+    return api<ElectionListItem & { candidateCount: number }>('/api/elections', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
+}
+
+export const candidatesApi = {
+  getList(electionId: string) {
+    return api<Candidate[]>(`/api/elections/${electionId}/candidates`)
+  },
+
+  create(electionId: string, body: { name: string; description?: string }) {
+    return api<Candidate>(`/api/elections/${electionId}/candidates`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
+}

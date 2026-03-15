@@ -15,6 +15,7 @@ import ManageElectionsPage from './pages/admin/ManageElectionsPage';
 import ManageVotersPage from './pages/admin/ManageVotersPage';
 import BlockchainLogsPage from './pages/admin/BlockchainLogsPage';
 import ElectionDetailPage from './pages/admin/ElectionDetailPage';
+import PublicElectionsPage from './pages/public/PublicElectionsPage';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/elections" element={<PublicElectionsPage />} />
 
         {/* Voter */}
         <Route path="/voter/dashboard" element={<VoterDashboard />} />

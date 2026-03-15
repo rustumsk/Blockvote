@@ -22,6 +22,12 @@ const Navbar = () => {
         >
           How it works
         </a>
+        <Link
+          to="/elections"
+          className="text-[#8899aa] hover:text-white transition-colors text-sm font-medium"
+        >
+          Elections
+        </Link>
       </div>
 
       {/* Actions */}
