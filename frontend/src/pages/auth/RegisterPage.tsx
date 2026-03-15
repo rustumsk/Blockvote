@@ -23,26 +23,11 @@ const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!name.trim()) {
-      setError('Name is required');
-      return;
-    }
-    if (!email.trim()) {
-      setError('Email is required');
-      return;
-    }
-    if (!password) {
-      setError('Password is required');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    if (!agreed) {
-      setError('Please agree to the Terms & Conditions');
-      return;
-    }
+    if (!name.trim()) { setError('Name is required'); return; }
+    if (!email.trim()) { setError('Email is required'); return; }
+    if (!password) { setError('Password is required'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (!agreed) { setError('Please agree to the Terms & Conditions'); return; }
     setSubmitting(true);
     try {
       await register({
@@ -62,135 +47,93 @@ const RegisterPage = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#060b14] flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-2xl border border-[#1a2a3a] bg-[#0f1929] p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#00d4c8]/20 flex items-center justify-center mx-auto mb-4">
-            <Box size={32} className="text-[#00d4c8]" />
+      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-2xl border border-bv-border bg-bv-surface p-8 text-center shadow-2xl shadow-black/30">
+          <div className="w-14 h-14 rounded-2xl bg-bv-accent-muted flex items-center justify-center mx-auto mb-4">
+            <Box size={28} className="text-bv-accent" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
-          <p className="text-[#8899aa] text-sm">
-            We sent a verification link to <strong className="text-white">{email}</strong>. Click it to verify your account, then log in.
+          <h2 className="text-lg font-bold text-bv-ink mb-2">Check your email</h2>
+          <p className="text-bv-ink-secondary text-sm">
+            We sent a verification link to <strong className="text-bv-ink">{email}</strong>. Click it to verify your account, then log in.
           </p>
-          <p className="text-[#556677] text-xs mt-4">Redirecting to login...</p>
+          <p className="text-bv-ink-muted text-xs mt-4">Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#060b14] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
       <div
-        className="w-full max-w-4xl flex rounded-2xl overflow-hidden border border-[#1a2a3a]"
-        style={{ boxShadow: '0 0 60px rgba(0,0,0,0.6)' }}
+        className="w-full max-w-4xl flex rounded-2xl overflow-hidden border border-bv-border shadow-2xl shadow-black/30"
       >
         <div
-          className="relative w-[42%] flex-shrink-0 flex flex-col justify-between p-8 overflow-hidden"
-          style={{
-            background: 'linear-gradient(145deg, #0a1628 0%, #0d2035 40%, #0a1a2e 100%)',
-          }}
+          className="relative w-[42%] flex-shrink-0 flex flex-col justify-between p-8 overflow-hidden bg-bv-bg"
         >
           <div
-            className="absolute -top-16 -left-16 w-72 h-72 rounded-full pointer-events-none"
+            className="absolute -top-20 -left-20 w-64 h-64 rounded-full pointer-events-none opacity-40"
             style={{
-              background: 'radial-gradient(circle, rgba(0,212,200,0.25) 0%, transparent 70%)',
-              filter: 'blur(40px)',
-            }}
-          />
-          <div
-            className="absolute bottom-0 right-0 w-56 h-56 rounded-full pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(0,212,200,0.1) 0%, transparent 70%)',
-              filter: 'blur(30px)',
+              background: 'radial-gradient(circle, rgba(0,212,200,0.2) 0%, transparent 70%)',
+              filter: 'blur(50px)',
             }}
           />
 
           <div className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center">
-              <Box size={20} className="text-[#0a0f1a]" />
+            <div className="w-8 h-8 bg-bv-accent rounded-lg flex items-center justify-center">
+              <Box size={16} className="text-bv-bg" />
             </div>
-            <span className="text-white font-bold text-lg tracking-wide">BLOCKVOTE</span>
+            <span className="text-bv-ink font-bold text-base tracking-wide">BLOCKVOTE</span>
           </div>
 
-          <div className="relative flex-1 flex flex-col items-center justify-center py-10 gap-8">
-            <div
-              className="w-24 h-24 rounded-2xl flex items-center justify-center"
-              style={{
-                background: 'rgba(0,212,200,0.08)',
-                border: '1px solid rgba(0,212,200,0.2)',
-                boxShadow: '0 0 40px rgba(0,212,200,0.1)',
-              }}
-            >
-              <Box size={44} className="text-[#00d4c8]" />
+          <div className="relative flex-1 flex flex-col items-center justify-center py-10 gap-7">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-bv-accent-muted border border-bv-accent/15">
+              <Box size={36} className="text-bv-accent" />
             </div>
 
-            <div className="space-y-3 w-full max-w-[220px]">
+            <div className="space-y-3 w-full max-w-[200px]">
               {[
                 { icon: Shield, text: 'Register & Get Approved' },
                 { icon: Vote, text: 'Cast Your Vote Securely' },
                 { icon: Search, text: 'Verify Anytime On-Chain' },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-[#00d4c8]/15 flex items-center justify-center flex-shrink-0">
-                    <Icon size={13} className="text-[#00d4c8]" />
+                  <div className="w-7 h-7 rounded-lg bg-bv-accent-muted flex items-center justify-center flex-shrink-0">
+                    <Icon size={13} className="text-bv-accent" />
                   </div>
-                  <span className="text-[#8899aa] text-xs">{text}</span>
+                  <span className="text-bv-ink-secondary text-xs">{text}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="relative">
-            <p className="text-white font-semibold text-base leading-snug">
+            <p className="text-bv-ink font-semibold text-sm leading-snug">
               Secure. Transparent.
               <br />
               Tamper-Proof Voting.
             </p>
-            <p className="text-[#556677] text-xs mt-1">Powered by blockchain technology</p>
+            <p className="text-bv-ink-muted text-[11px] mt-1">Powered by blockchain technology</p>
           </div>
         </div>
 
-        <div className="flex-1 bg-[#0f1929] flex flex-col justify-center px-10 py-10">
-          <h1 className="text-3xl font-bold text-white mb-1">Create an account</h1>
-          <p className="text-[#8899aa] text-sm mb-7">
+        <div className="flex-1 bg-bv-surface flex flex-col justify-center px-10 py-10">
+          <h1 className="text-2xl font-bold text-bv-ink mb-1">Create an account</h1>
+          <p className="text-bv-ink-secondary text-sm mb-6">
             Already have an account?{' '}
-            <Link to="/login" className="text-[#00d4c8] hover:underline font-medium">
+            <Link to="/login" className="text-bv-accent hover:underline font-medium">
               Log in
             </Link>
           </p>
 
           <form className="space-y-3" onSubmit={handleSubmit}>
             {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/15 text-red-400 text-sm">
                 {error}
               </div>
             )}
-            <Input
-              type="text"
-              placeholder="Full name"
-              icon={<User size={15} />}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
-
-            <Input
-              type="email"
-              placeholder="Email address"
-              icon={<Mail size={15} />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-
-            <Input
-              type="tel"
-              placeholder="Phone number (optional)"
-              icon={<Phone size={15} />}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              autoComplete="tel"
-            />
-
+            <Input type="text" placeholder="Full name" icon={<User size={15} />} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            <Input type="email" placeholder="Email address" icon={<Mail size={15} />} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <Input type="tel" placeholder="Phone number (optional)" icon={<Phone size={15} />} value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
             <Input
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a password"
@@ -199,16 +142,11 @@ const RegisterPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
               rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[#556677] hover:text-[#8899aa] transition-colors"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-bv-ink-muted hover:text-bv-ink-secondary transition-colors">
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               }
             />
-
             <Input
               type={showConfirm ? 'text' : 'password'}
               placeholder="Confirm your password"
@@ -217,11 +155,7 @@ const RegisterPage = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
               rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="text-[#556677] hover:text-[#8899aa] transition-colors"
-                >
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-bv-ink-muted hover:text-bv-ink-secondary transition-colors">
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               }
@@ -232,20 +166,20 @@ const RegisterPage = () => {
                 role="button"
                 tabIndex={0}
                 className={`w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-colors ${
-                  agreed ? 'bg-[#00d4c8] border-[#00d4c8]' : 'border-[#1a2a3a] bg-[#0a0f1a]'
+                  agreed ? 'bg-bv-accent border-bv-accent' : 'border-bv-border bg-bv-bg'
                 }`}
                 onClick={() => setAgreed(!agreed)}
                 onKeyDown={(e) => e.key === 'Enter' && setAgreed((a) => !a)}
               >
                 {agreed && (
                   <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4l3 3 5-6" stroke="#0a0f1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M1 4l3 3 5-6" stroke="#0e0f14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
-              <span className="text-[#8899aa] text-xs">
+              <span className="text-bv-ink-secondary text-xs">
                 I agree to the{' '}
-                <a href="#" className="text-[#00d4c8] hover:underline" onClick={(e) => e.preventDefault()}>
+                <a href="#" className="text-bv-accent hover:underline" onClick={(e) => e.preventDefault()}>
                   Terms & Conditions
                 </a>
               </span>
@@ -256,15 +190,15 @@ const RegisterPage = () => {
             </Button>
           </form>
 
-          <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-            <p className="text-yellow-400 text-xs text-center leading-relaxed">
+          <div className="mt-4 p-3 bg-amber-500/8 border border-amber-500/15 rounded-xl">
+            <p className="text-amber-400 text-xs text-center leading-relaxed">
               Your account will be reviewed and approved by an admin before you can vote.
             </p>
           </div>
 
           <p className="text-center mt-5">
-            <Link to="/" className="text-[#556677] text-xs hover:text-[#8899aa] transition-colors">
-              ← Back to home
+            <Link to="/" className="text-bv-ink-muted text-xs hover:text-bv-ink-secondary transition-colors">
+              &larr; Back to home
             </Link>
           </p>
         </div>

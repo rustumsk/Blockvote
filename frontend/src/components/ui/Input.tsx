@@ -11,18 +11,18 @@ const Input: React.FC<InputProps> = ({ label, error, icon, rightElement, classNa
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">
+        <label className="block text-xs text-bv-ink-muted uppercase tracking-wider mb-1.5 font-medium">
           {label}
         </label>
       )}
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#556677]">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-bv-ink-muted">
             {icon}
           </div>
         )}
         <input
-          className={`bg-[#0f1929] border border-[#1a2a3a] rounded-lg px-4 py-3 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full transition-colors duration-200 ${icon ? 'pl-10' : ''} ${rightElement ? 'pr-12' : ''} ${className}`}
+          className={`bg-bv-bg border border-bv-border rounded-xl px-4 py-3 text-bv-ink placeholder-bv-ink-muted text-sm focus:border-bv-accent focus:ring-1 focus:ring-bv-accent/30 focus:outline-none w-full transition-all duration-150 ${icon ? 'pl-10' : ''} ${rightElement ? 'pr-12' : ''} ${className}`}
           {...props}
         />
         {rightElement && (
@@ -31,7 +31,7 @@ const Input: React.FC<InputProps> = ({ label, error, icon, rightElement, classNa
           </div>
         )}
       </div>
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
     </div>
   );
 };

@@ -6,7 +6,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import { electionsApi, candidatesApi, type ElectionDetail, type Candidate } from '../../api/client';
+import { electionsApi, candidatesApi, resultsApi, type ElectionDetail, type Candidate } from '../../api/client';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -33,6 +33,13 @@ const ElectionDetailPage = () => {
   const [addDescription, setAddDescription] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [results, setResults] = useState<{
+    candidates: { contractCandidateId: number; name: string; voteCount: number }[];
+    winner: { contractCandidateId: number; name: string; voteCount: number } | null;
+    totalVotes: number;
+  } | null>(null);
+  const [resultsError, setResultsError] = useState<string | null>(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +51,39 @@ const ElectionDetailPage = () => {
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !election) return;
+
+    let cancelled = false;
+    let interval: number | undefined;
+
+    const fetchResults = async () => {
+      try {
+        setResultsLoading(true);
+        setResultsError(null);
+        const data = await resultsApi.getElectionResults(id);
+        if (!cancelled) setResults(data);
+      } catch (e) {
+        if (!cancelled) setResultsError((e as Error).message);
+      } finally {
+        if (!cancelled) setResultsLoading(false);
+      }
+    };
+
+    // Always load once
+    fetchResults();
+
+    // Poll while ACTIVE
+    if (election.status === 'ACTIVE') {
+      interval = window.setInterval(fetchResults, 5000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (interval) window.clearInterval(interval);
+    };
+  }, [id, election]);
 
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,10 +110,10 @@ const ElectionDetailPage = () => {
 
   if (!id) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex">
+      <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
         <main className="ml-12 flex-1 p-8">
-          <p className="text-[#8899aa]">Invalid election ID.</p>
+          <p className="text-bv-ink-secondary">Invalid election ID.</p>
         </main>
       </div>
     );
@@ -81,10 +121,10 @@ const ElectionDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex">
+      <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
         <main className="ml-12 flex-1 p-8">
-          <p className="text-[#556677]">Loading election...</p>
+          <p className="text-bv-ink-muted">Loading election...</p>
         </main>
       </div>
     );
@@ -92,11 +132,11 @@ const ElectionDetailPage = () => {
 
   if (error || !election) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex">
+      <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
         <main className="ml-12 flex-1 p-8">
           <p className="text-red-400">{error || 'Election not found.'}</p>
-          <Link to="/admin/elections" className="text-[#00d4c8] hover:underline mt-2 inline-block">
+          <Link to="/admin/elections" className="text-bv-accent hover:underline mt-2 inline-block">
             Back to elections
           </Link>
         </main>
@@ -105,30 +145,30 @@ const ElectionDetailPage = () => {
   }
 
   const isUpcoming = election.status === 'UPCOMING';
-  const totalVotes = election.candidates?.length ? 0 : 0; // TODO: from votes when results API exists
+  const totalVotes = results?.totalVotes ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto">
         <div className="flex items-center gap-4 mb-8">
           <Link
             to="/admin/elections"
-            className="flex items-center gap-1.5 text-[#8899aa] hover:text-white transition-colors text-sm"
+            className="flex items-center gap-1.5 text-bv-ink-secondary hover:text-bv-ink transition-colors text-sm"
           >
             <ArrowLeft size={16} />
             Back
           </Link>
-          <div className="h-4 w-px bg-[#1a2a3a]" />
+          <div className="h-4 w-px bg-bv-border" />
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">{election.title}</h1>
+            <h1 className="text-2xl font-bold text-bv-ink">{election.title}</h1>
             <Badge variant={statusToVariant(election.status)} />
           </div>
         </div>
 
-        <p className="text-[#8899aa] text-sm mb-6 max-w-2xl">{election.description}</p>
-        <div className="flex items-center gap-4 text-[#556677] text-sm mb-8">
+        <p className="text-bv-ink-secondary text-sm mb-6 max-w-2xl">{election.description}</p>
+        <div className="flex items-center gap-4 text-bv-ink-muted text-sm mb-8">
           <span>Start: {formatDate(election.startDate)}</span>
           <span>End: {formatDate(election.endDate)}</span>
         </div>
@@ -139,18 +179,18 @@ const ElectionDetailPage = () => {
             { icon: BarChart2, label: 'Total Votes Cast', value: String(totalVotes) },
             { icon: Users, label: 'Status', value: election.status },
           ].map((card) => (
-            <div key={card.label} className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-5">
+            <div key={card.label} className="bg-bv-surface border border-bv-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-3">
-                <card.icon size={16} className="text-[#00d4c8]" />
-                <span className="text-[#556677] text-xs uppercase tracking-wide">{card.label}</span>
+                <card.icon size={16} className="text-bv-accent" />
+                <span className="text-bv-ink-muted text-xs uppercase tracking-wide">{card.label}</span>
               </div>
-              <div className="text-2xl font-bold text-white">{card.value}</div>
+              <div className="text-2xl font-bold text-bv-ink">{card.value}</div>
             </div>
           ))}
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Candidates</h2>
+          <h2 className="text-lg font-bold text-bv-ink">Candidates</h2>
           {isUpcoming && (
             <Button variant="primary" size="sm" onClick={() => setShowAddCandidate(true)}>
               <Plus size={16} />
@@ -159,9 +199,9 @@ const ElectionDetailPage = () => {
           )}
         </div>
 
-        <div className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-6 mb-6">
+        <div className="bg-bv-surface border border-bv-border rounded-xl p-6 mb-6">
           {!election.candidates?.length ? (
-            <p className="text-[#556677]">
+            <p className="text-bv-ink-muted">
               No candidates yet.{' '}
               {isUpcoming && 'Click "Add candidate" to add candidates before the election starts.'}
             </p>
@@ -170,13 +210,13 @@ const ElectionDetailPage = () => {
               {election.candidates.map((c: Candidate, idx: number) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between py-2 border-b border-[#1a2a3a] last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-bv-border last:border-0"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[#556677] text-xs w-4">{idx + 1}.</span>
-                    <span className="text-white text-sm font-medium">{c.name}</span>
+                    <span className="text-bv-ink-muted text-xs w-4">{idx + 1}.</span>
+                    <span className="text-bv-ink text-sm font-medium">{c.name}</span>
                     {c.description && (
-                      <span className="text-[#8899aa] text-xs">— {c.description}</span>
+                      <span className="text-bv-ink-secondary text-xs">— {c.description}</span>
                     )}
                   </div>
                 </div>
@@ -189,6 +229,58 @@ const ElectionDetailPage = () => {
           <Button variant="outline">Edit Election</Button>
           <Button variant="danger">Pause Election</Button>
         </div>
+
+        {/* Live Results */}
+        <section className="mt-8">
+          <h2 className="text-lg font-bold text-bv-ink mb-3">Live Results</h2>
+          <div className="bg-bv-surface border border-bv-border rounded-xl p-6">
+            {resultsLoading && !results && (
+              <p className="text-bv-ink-muted text-sm">Loading results from the blockchain...</p>
+            )}
+            {resultsError && (
+              <p className="text-red-400 text-sm">{resultsError}</p>
+            )}
+            {!resultsLoading && !resultsError && results && results.candidates.length === 0 && (
+              <p className="text-bv-ink-muted text-sm">
+                No votes have been recorded for this election yet.
+              </p>
+            )}
+            {!resultsLoading && results && results.candidates.length > 0 && (
+              <div className="space-y-4">
+                {results.candidates.map((c) => {
+                  const percent =
+                    results.totalVotes > 0
+                      ? Math.round((c.voteCount / results.totalVotes) * 100)
+                      : 0;
+                  return (
+                    <div key={c.contractCandidateId}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-bv-ink text-sm font-medium">{c.name}</span>
+                        </div>
+                          <span className="text-bv-ink-secondary text-xs">
+                            {c.voteCount} votes ({percent}%)
+                          </span>
+                      </div>
+                      <div className="h-2 bg-bv-bg rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-bv-accent transition-all"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {results.winner && (
+                  <p className="text-bv-accent text-sm mt-3">
+                    Current winner: <strong>{results.winner.name}</strong> ({results.winner.voteCount}{' '}
+                    votes)
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       {showAddCandidate && (
@@ -202,13 +294,13 @@ const ElectionDetailPage = () => {
               required
             />
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
                 Description (optional)
               </label>
               <textarea
                 rows={2}
                 placeholder="Short description"
-                className="bg-[#0f1929] border border-[#1a2a3a] rounded-lg px-4 py-3 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full resize-none text-sm"
+                className="bg-bv-surface border border-bv-border rounded-lg px-4 py-3 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full resize-none text-sm"
                 value={addDescription}
                 onChange={(e) => setAddDescription(e.target.value)}
               />

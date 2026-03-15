@@ -56,33 +56,33 @@ const PublicElectionsPage = () => {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-bv-bg text-bv-ink">
       <Navbar />
 
       <main className="pt-24 pb-16 px-8 max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Elections</h1>
-          <p className="text-[#8899aa] mt-1">View all elections and the voting schedule. No account required.</p>
+          <h1 className="text-3xl font-bold text-bv-ink">Elections</h1>
+          <p className="text-bv-ink-secondary mt-1">View all elections and the voting schedule. No account required.</p>
         </div>
 
         <div className="relative w-full max-w-sm mb-6">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#556677]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search elections..."
-            className="bg-[#0f1929] border border-[#1a2a3a] rounded-lg pl-9 pr-4 py-2.5 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full text-sm"
+            className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
           />
         </div>
 
-        <div className="flex items-center gap-1 mb-6 bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === tab.key ? 'bg-[#00d4c8] text-black' : 'text-[#8899aa] hover:text-white'
+                activeTab === tab.key ? 'bg-bv-accent text-bv-bg' : 'text-bv-ink-secondary hover:text-bv-ink'
               }`}
             >
               {tab.label}
@@ -97,30 +97,30 @@ const PublicElectionsPage = () => {
         )}
 
         {loading ? (
-          <div className="text-center py-16 text-[#556677]">Loading elections...</div>
+          <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-[#556677]">No elections found.</div>
+          <div className="text-center py-16 text-bv-ink-muted">No elections found.</div>
         ) : (
           <>
             <section className="mb-12">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-bv-ink mb-4 flex items-center gap-2">
                 <Calendar size={20} />
                 Election schedule
               </h2>
-              <div className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl overflow-hidden">
+              <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-[#1a2a3a]">
-                      <th className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">Title</th>
-                      <th className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">Status</th>
-                      <th className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">Start</th>
-                      <th className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">End</th>
+                    <tr className="border-b border-bv-border">
+                      <th className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">Title</th>
+                      <th className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">Status</th>
+                      <th className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">Start</th>
+                      <th className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">End</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1a2a3a]">
+                  <tbody className="divide-y divide-bv-border">
                     {schedule.map((e) => (
-                      <tr key={e.id} className="hover:bg-white/[0.02]">
-                        <td className="px-5 py-3 text-white text-sm font-medium">{e.title}</td>
+                      <tr key={e.id} className="hover:bg-bv-surface-hover/50">
+                        <td className="px-5 py-3 text-bv-ink text-sm font-medium">{e.title}</td>
                         <td className="px-5 py-3">
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                             e.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
@@ -130,8 +130,8 @@ const PublicElectionsPage = () => {
                             {e.status}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-[#8899aa] text-sm">{formatDate(e.startDate)}</td>
-                        <td className="px-5 py-3 text-[#8899aa] text-sm">{formatDate(e.endDate)}</td>
+                        <td className="px-5 py-3 text-bv-ink-secondary text-sm">{formatDate(e.startDate)}</td>
+                        <td className="px-5 py-3 text-bv-ink-secondary text-sm">{formatDate(e.endDate)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -140,7 +140,7 @@ const PublicElectionsPage = () => {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">All elections</h2>
+              <h2 className="text-xl font-semibold text-bv-ink mb-4">All elections</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filtered.map((election) => (
                   <ElectionCard
@@ -149,8 +149,8 @@ const PublicElectionsPage = () => {
                     title={election.title}
                     description={election.description}
                     status={statusToVariant(election.status)}
-                    startDate={formatDate(election.startDate)}
-                    endDate={formatDate(election.endDate)}
+                    startDate={election.startDate}
+                    endDate={election.endDate}
                     candidateCount={election.candidateCount}
                     hasVoted={false}
                     role="voter"
@@ -161,10 +161,10 @@ const PublicElectionsPage = () => {
           </>
         )}
 
-        <p className="mt-8 text-[#556677] text-sm">
-          <Link to="/register" className="text-[#00d4c8] hover:underline">Register</Link>
+        <p className="mt-8 text-bv-ink-muted text-sm">
+          <Link to="/register" className="text-bv-accent hover:underline">Register</Link>
           {' or '}
-          <Link to="/login" className="text-[#00d4c8] hover:underline">log in</Link>
+          <Link to="/login" className="text-bv-accent hover:underline">log in</Link>
           {' to cast your vote in active elections.'}
         </p>
       </main>

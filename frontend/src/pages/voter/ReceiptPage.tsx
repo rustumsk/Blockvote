@@ -1,21 +1,48 @@
-import { CheckCircle, Copy, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { CheckCircle, Copy, ExternalLink, Download } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
-
-const receipt = {
-  election: 'Student Council President 2026',
-  candidate: 'Sofia Ramirez',
-  wallet: '0x1234...5678',
-  txHash: '0xabcd1234ef567890fedc...ba987654',
-  txHashShort: '0xabcd...4321',
-  timestamp: 'March 5, 2026  10:30 AM',
-  blockNumber: '#4829102',
-};
+import { votesApi } from '../../api/client';
 
 const ReceiptPage = () => {
+  const [searchParams] = useSearchParams()
+  const txFromQuery = searchParams.get('tx') ?? undefined
+
+  const [receipts, setReceipts] = useState<
+    {
+      id: string
+      txHash: string
+      createdAt: string
+      election: { id: string; title: string }
+      candidate: { id: string; name: string }
+    }[]
+  >([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleDownload = () => {
+    window.print()
+  }
+
+  useEffect(() => {
+    const loadAll = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await votesApi.myVotes()
+        setReceipts(res)
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadAll()
+  }, [])
+
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto flex items-start justify-center">
@@ -28,50 +55,94 @@ const ReceiptPage = () => {
             >
               <CheckCircle size={40} className="text-green-400" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Vote Successfully Cast!</h1>
-            <p className="text-[#8899aa] text-base">Your vote has been recorded on the blockchain</p>
+            <h1 className="text-3xl font-bold text-bv-ink mb-2">Vote Successfully Cast!</h1>
+            <p className="text-bv-ink-secondary text-base">Your vote has been recorded on the blockchain</p>
           </div>
 
           {/* Receipt card */}
           <div
-            className="bg-[#0f1929] border border-[#1a2a3a] rounded-2xl p-6 mb-6"
+            className="bg-bv-surface border border-bv-border rounded-2xl p-6 mb-6"
             style={{ boxShadow: '0 0 20px rgba(0, 212, 200, 0.05)' }}
           >
-            <h2 className="text-sm font-semibold text-[#00d4c8] uppercase tracking-widest mb-5">
-              Vote Receipt
+            <h2 className="text-sm font-semibold text-bv-accent uppercase tracking-widest mb-5">
+              My Vote Receipts
             </h2>
 
-            <div className="space-y-4">
-              {[
-                { label: 'Election', value: receipt.election },
-                { label: 'Candidate', value: receipt.candidate },
-                { label: 'Wallet', value: receipt.wallet },
-                { label: 'Timestamp', value: receipt.timestamp },
-                { label: 'Block Number', value: receipt.blockNumber },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between py-3 border-b border-[#1a2a3a] last:border-0">
-                  <span className="text-[#556677] text-xs uppercase tracking-wide">{item.label}</span>
-                  <span className="text-white text-sm font-medium">{item.value}</span>
-                </div>
-              ))}
-
-              {/* Tx Hash row with copy */}
-              <div className="flex items-center justify-between py-3 border-b border-[#1a2a3a]">
-                <span className="text-[#556677] text-xs uppercase tracking-wide">Transaction Hash</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#00d4c8] text-sm font-mono">{receipt.txHashShort}</span>
-                  <button className="text-[#556677] hover:text-[#00d4c8] transition-colors">
-                    <Copy size={14} />
-                  </button>
-                  <button className="text-[#556677] hover:text-[#00d4c8] transition-colors">
-                    <ExternalLink size={14} />
-                  </button>
-                </div>
+            {loading && (
+              <p className="text-bv-ink-muted text-sm">Loading your receipts...</p>
+            )}
+            {error && (
+              <p className="text-red-400 text-sm">{error}</p>
+            )}
+            {!loading && !error && receipts.length === 0 && (
+              <p className="text-bv-ink-muted text-sm">You have not cast any votes yet.</p>
+            )}
+            {!loading && !error && receipts.length > 0 && (
+              <div className="space-y-4">
+                {receipts.map((r) => {
+                  const shortHash =
+                    r.txHash.length > 14
+                      ? `${r.txHash.slice(0, 10)}...${r.txHash.slice(-4)}`
+                      : r.txHash
+                  return (
+                    <div
+                      key={r.id}
+                      className="py-3 border-b border-bv-border last:border-0"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div>
+                          <p className="text-bv-ink text-sm font-medium">
+                            {r.election.title}
+                          </p>
+                          <p className="text-bv-ink-secondary text-xs">
+                            Voted for {r.candidate.name}
+                          </p>
+                        </div>
+                        <span className="text-bv-ink-muted text-xs">
+                          {new Date(r.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-bv-accent text-xs font-mono">
+                            {shortHash}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-bv-ink-muted hover:text-bv-accent transition-colors"
+                            onClick={() => navigator.clipboard.writeText(r.txHash)}
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-bv-ink-muted hover:text-bv-accent text-xs transition-colors"
+                          onClick={() =>
+                            window.open(
+                              `https://sepolia.etherscan.io/tx/${r.txHash}`,
+                              '_blank'
+                            )
+                          }
+                        >
+                          <ExternalLink size={13} />
+                          Etherscan
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Actions */}
+          {error && (
+            <p className="mb-3 text-red-400 text-sm text-center">{error}</p>
+          )}
+          {loading && (
+            <p className="mb-3 text-bv-ink-muted text-sm text-center">Verifying transaction...</p>
+          )}
           <div className="flex gap-3 mb-5">
             <Link to="/voter/verify" className="flex-1">
               <Button variant="primary" fullWidth>
@@ -83,12 +154,21 @@ const ReceiptPage = () => {
                 Back to Elections
               </Button>
             </Link>
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              onClick={handleDownload}
+            >
+              <Download size={16} />
+              <span className="ml-1">Download PDF</span>
+            </Button>
           </div>
 
           {/* Note */}
-          <div className="flex items-start gap-2 p-3 bg-[#0f1929] border border-[#1a2a3a] rounded-lg">
-            <div className="w-1 h-1 rounded-full bg-[#00d4c8] mt-2 flex-shrink-0" />
-            <p className="text-[#8899aa] text-xs leading-relaxed">
+          <div className="flex items-start gap-2 p-3 bg-bv-surface border border-bv-border rounded-lg">
+            <div className="w-1 h-1 rounded-full bg-bv-accent mt-2 flex-shrink-0" />
+            <p className="text-bv-ink-secondary text-xs leading-relaxed">
               Save your transaction hash to verify your vote at any time. Anyone can verify any vote using its transaction hash.
             </p>
           </div>

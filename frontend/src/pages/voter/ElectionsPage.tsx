@@ -13,14 +13,6 @@ const tabs: { key: FilterTab; label: string }[] = [
   { key: 'CLOSED', label: 'Closed' },
 ]
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 function statusToVariant(s: string): 'active' | 'upcoming' | 'closed' {
   const lower = s.toLowerCase()
   if (lower === 'active') return 'active'
@@ -51,23 +43,23 @@ const ElectionsPage = () => {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Elections</h1>
-            <p className="text-[#8899aa] text-sm mt-1">Browse and participate in ongoing elections</p>
+            <h1 className="text-2xl font-bold text-bv-ink">Elections</h1>
+            <p className="text-bv-ink-secondary text-sm mt-1">Browse and participate in ongoing elections</p>
           </div>
           <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#556677]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search elections..."
-              className="bg-[#0f1929] border border-[#1a2a3a] rounded-lg pl-9 pr-4 py-2.5 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full text-sm"
+              className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
             />
           </div>
         </div>
@@ -78,13 +70,13 @@ const ElectionsPage = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-1 mb-6 bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === tab.key ? 'bg-[#00d4c8] text-black' : 'text-[#8899aa] hover:text-white'
+                activeTab === tab.key ? 'bg-bv-accent text-bv-bg' : 'text-bv-ink-secondary hover:text-bv-ink'
               }`}
             >
               {tab.label}
@@ -93,9 +85,9 @@ const ElectionsPage = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-[#556677]">Loading elections...</div>
+          <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-[#556677]">No elections found.</div>
+          <div className="text-center py-16 text-bv-ink-muted">No elections found.</div>
         ) : (
           <div className="grid grid-cols-3 gap-5">
             {filtered.map((election) => (
@@ -105,8 +97,8 @@ const ElectionsPage = () => {
                 title={election.title}
                 description={election.description}
                 status={statusToVariant(election.status)}
-                startDate={formatDate(election.startDate)}
-                endDate={formatDate(election.endDate)}
+                startDate={election.startDate}
+                endDate={election.endDate}
                 candidateCount={election.candidateCount}
                 hasVoted={false}
                 role="voter"

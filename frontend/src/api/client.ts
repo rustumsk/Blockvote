@@ -175,6 +175,13 @@ export const electionsApi = {
       token: getToken(),
     })
   },
+
+  delete(id: string) {
+    return api<{ message: string }>(`/api/elections/${id}`, {
+      method: 'DELETE',
+      token: getToken(),
+    })
+  },
 }
 
 export const candidatesApi = {
@@ -188,5 +195,68 @@ export const candidatesApi = {
       body: JSON.stringify(body),
       token: getToken(),
     })
+  },
+}
+
+export const votesApi = {
+  recordVote(body: { electionId: string; candidateId: string; txHash: string }) {
+    return api<{
+      message: string
+      txHash: string
+      election: { id: string; title: string }
+      candidate: { id: string; name: string }
+      wallet?: string | null
+    }>('/api/votes', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
+
+  myVotes() {
+    return api<
+      {
+        id: string
+        txHash: string
+        createdAt: string
+        election: { id: string; title: string }
+        candidate: { id: string; name: string }
+      }[]
+    >('/api/votes/my', { token: getToken() })
+  },
+
+  verify(txHash: string) {
+    return api<{
+      verified: boolean
+      vote: {
+        election: { id: string; title: string }
+        candidate: { id: string; name: string }
+        user: { walletAddress: string | null }
+        createdAt: string
+        txHash: string
+      }
+      receipt: unknown
+    }>(`/api/votes/verify/${encodeURIComponent(txHash)}`)
+  },
+}
+
+export const resultsApi = {
+  getElectionResults(electionId: string) {
+    return api<{
+      candidates: { contractCandidateId: number; name: string; voteCount: number }[]
+      winner: { contractCandidateId: number; name: string; voteCount: number } | null
+      totalVotes: number
+    }>(`/api/results/${electionId}`)
+  },
+
+  getElectionLogs(electionId: string) {
+    return api<
+      {
+        id: string
+        txHash: string
+        candidateId: string
+        timestamp: string
+      }[]
+    >(`/api/results/${electionId}/logs`, { token: getToken() })
   },
 }

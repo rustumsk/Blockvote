@@ -142,23 +142,23 @@ const ManageVotersPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Manage Voters</h1>
-            <p className="text-[#8899aa] text-sm mt-1">Review and manage voter registrations</p>
+            <h1 className="text-2xl font-bold text-bv-ink">Manage Voters</h1>
+            <p className="text-bv-ink-secondary text-sm mt-1">Review and manage voter registrations</p>
           </div>
           <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#556677]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search voters..."
-              className="bg-[#0f1929] border border-[#1a2a3a] rounded-lg pl-9 pr-4 py-2.5 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full text-sm"
+              className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
             />
           </div>
         </div>
@@ -166,20 +166,20 @@ const ManageVotersPage = () => {
         {message && (
           <div
             className={`mb-4 p-3 rounded-lg text-sm ${
-              message.type === 'success' ? 'bg-[#00d4c8]/10 text-[#00d4c8] border border-[#00d4c8]/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+              message.type === 'success' ? 'bg-bv-accent-muted text-bv-accent border border-bv-accent/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
             }`}
           >
             {message.text}
           </div>
         )}
 
-        <div className="flex items-center gap-1 mb-6 bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === tab.key ? 'bg-[#00d4c8] text-black' : 'text-[#8899aa] hover:text-white'
+                activeTab === tab.key ? 'bg-bv-accent text-bv-bg' : 'text-bv-ink-secondary hover:text-bv-ink'
               }`}
             >
               {tab.label}
@@ -187,24 +187,24 @@ const ManageVotersPage = () => {
           ))}
         </div>
 
-        <div className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl overflow-hidden">
+        <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
           {loading ? (
-            <div className="p-12 text-center text-[#8899aa]">Loading voters...</div>
+            <div className="p-12 text-center text-bv-ink-secondary">Loading voters...</div>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#1a2a3a]">
+                <tr className="border-b border-bv-border">
                   {['Name', 'Email', 'Wallet Address', 'Status', 'Registered Date', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">
+                    <th key={h} className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1a2a3a]">
+              <tbody className="divide-y divide-bv-border">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#8899aa] text-sm">
+                    <td colSpan={6} className="px-5 py-12 text-center text-bv-ink-secondary text-sm">
                       {votersList.length === 0 ? 'No voters yet.' : 'No voters match the current filters.'}
                     </td>
                   </tr>
@@ -215,16 +215,16 @@ const ManageVotersPage = () => {
                       className={`transition-colors ${
                         voter.status === 'pending'
                           ? 'bg-yellow-500/[0.03] hover:bg-yellow-500/[0.06]'
-                          : 'hover:bg-white/[0.02]'
+                          : 'hover:bg-bv-surface-hover/50'
                       }`}
                     >
-                      <td className="px-5 py-4 text-white text-sm font-medium">{voter.name}</td>
-                      <td className="px-5 py-4 text-[#8899aa] text-sm">{voter.email}</td>
-                      <td className="px-5 py-4 text-[#8899aa] text-sm font-mono">{voter.wallet}</td>
+                      <td className="px-5 py-4 text-bv-ink text-sm font-medium">{voter.name}</td>
+                      <td className="px-5 py-4 text-bv-ink-secondary text-sm">{voter.email}</td>
+                      <td className="px-5 py-4 text-bv-ink-secondary text-sm font-mono">{voter.wallet}</td>
                       <td className="px-5 py-4">
                         <Badge variant={voter.status} />
                       </td>
-                      <td className="px-5 py-4 text-[#8899aa] text-sm">{voter.registered}</td>
+                      <td className="px-5 py-4 text-bv-ink-secondary text-sm">{voter.registered}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           {voter.status !== 'approved' && (

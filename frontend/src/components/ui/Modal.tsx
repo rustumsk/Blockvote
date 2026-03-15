@@ -10,18 +10,18 @@ interface ModalProps {
 
 const Modal: React.FC<ModalProps> = ({ title, onClose, children, className = '' }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div
-        className={`bg-[#0f1929] border border-[#1a2a3a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto teal-glow ${className}`}
+        className={`bg-bv-surface border border-bv-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/40 ${className}`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-[#1a2a3a]">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-bv-border">
+          <h2 className="text-lg font-semibold text-bv-ink">{title}</h2>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-[#8899aa] hover:text-white hover:bg-white/5 transition-colors"
+              className="p-1.5 rounded-lg text-bv-ink-muted hover:text-bv-ink hover:bg-bv-surface-hover transition-colors"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           )}
         </div>

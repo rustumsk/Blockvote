@@ -59,31 +59,31 @@ const ProfilePage = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
-        <p className="text-[#8899aa]">Loading...</p>
+      <div className="min-h-screen bg-bv-bg flex items-center justify-center">
+        <p className="text-bv-ink-secondary">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto max-w-2xl">
-        <h1 className="text-2xl font-bold text-white mb-6">Profile</h1>
+        <h1 className="text-2xl font-bold text-bv-ink mb-6">Profile</h1>
 
         <form onSubmit={handleSave} className="space-y-6">
           {message && (
             <div
               className={`p-3 rounded-lg text-sm ${
-                message.type === 'success' ? 'bg-[#00d4c8]/10 text-[#00d4c8] border border-[#00d4c8]/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                message.type === 'success' ? 'bg-bv-accent-muted text-bv-accent border border-bv-accent/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
               }`}
             >
               {message.text}
             </div>
           )}
 
-          <div className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-6 space-y-4">
+          <div className="bg-bv-surface border border-bv-border rounded-2xl p-6 space-y-4">
             <Input
               label="Name"
               value={name}
@@ -100,36 +100,36 @@ const ProfilePage = () => {
               icon={<Phone size={16} />}
             />
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">Email</label>
-              <div className="flex items-center gap-3 bg-[#0a0f1a] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#8899aa]">
-                <Mail size={16} className="text-[#556677]" />
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Email</label>
+              <div className="flex items-center gap-3 bg-bv-bg border border-bv-border rounded-lg px-4 py-3 text-bv-ink-secondary">
+                <Mail size={16} className="text-bv-ink-muted" />
                 <span>{user.email}</span>
               </div>
-              <p className="text-[#556677] text-xs mt-1">Email cannot be changed.</p>
+              <p className="text-bv-ink-muted text-xs mt-1">Email cannot be changed.</p>
             </div>
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">Role</label>
-              <div className="flex items-center gap-3 bg-[#0a0f1a] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#8899aa]">
-                <Shield size={16} className="text-[#556677]" />
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Role</label>
+              <div className="flex items-center gap-3 bg-bv-bg border border-bv-border rounded-lg px-4 py-3 text-bv-ink-secondary">
+                <Shield size={16} className="text-bv-ink-muted" />
                 <span>{user.role}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">Status</label>
-              <div className="flex items-center gap-3 bg-[#0a0f1a] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#8899aa]">
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Status</label>
+              <div className="flex items-center gap-3 bg-bv-bg border border-bv-border rounded-lg px-4 py-3 text-bv-ink-secondary">
                 <span className="capitalize">{user.status?.toLowerCase()}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">Wallet</label>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Wallet</label>
               {user.walletAddress ? (
-                <div className="flex items-center gap-3 bg-[#0a0f1a] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#8899aa] font-mono text-sm">
-                  <Wallet size={16} className="text-[#556677]" />
+                <div className="flex items-center gap-3 bg-bv-bg border border-bv-border rounded-lg px-4 py-3 text-bv-ink-secondary font-mono text-sm">
+                  <Wallet size={16} className="text-bv-ink-muted" />
                   <span>{user.walletAddress}</span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[#556677] text-sm">No wallet linked. Connect one to vote on-chain.</p>
+                  <p className="text-bv-ink-muted text-sm">No wallet linked. Connect one to vote on-chain.</p>
                   <ConnectWalletButton variant="outline" size="sm" showIcon />
                 </div>
               )}
@@ -141,9 +141,9 @@ const ProfilePage = () => {
           </Button>
         </form>
 
-        <div className="mt-12 pt-8 border-t border-[#1a2a3a]">
-          <h2 className="text-lg font-semibold text-white mb-2">Danger zone</h2>
-          <p className="text-[#8899aa] text-sm mb-4">
+        <div className="mt-12 pt-8 border-t border-bv-border">
+          <h2 className="text-lg font-semibold text-bv-ink mb-2">Danger zone</h2>
+          <p className="text-bv-ink-secondary text-sm mb-4">
             Deleting your account will remove all your data and vote records. This cannot be undone.
           </p>
           <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
@@ -156,8 +156,8 @@ const ProfilePage = () => {
       {deleteModalOpen && (
         <Modal title="Delete account" onClose={() => !deleting && setDeleteModalOpen(false)}>
           <div className="space-y-4">
-            <p className="text-[#8899aa] text-sm">
-              This will permanently delete your account and all associated data. Type <strong className="text-white">DELETE</strong> to confirm.
+            <p className="text-bv-ink-secondary text-sm">
+              This will permanently delete your account and all associated data. Type <strong className="text-bv-ink">DELETE</strong> to confirm.
             </p>
             <Input
               value={deleteConfirm}

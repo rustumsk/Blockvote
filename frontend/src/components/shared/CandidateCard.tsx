@@ -18,36 +18,33 @@ const CandidateCard: React.FC<CandidateCardProps> = ({
   return (
     <div
       onClick={() => onSelect?.(id)}
-      className={`rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
+      className={`rounded-2xl p-5 border transition-all duration-150 cursor-pointer ${
         selected
-          ? 'border-[#00d4c8] bg-[#00d4c8]/5 shadow-[0_0_20px_rgba(0,212,200,0.1)]'
-          : 'bg-[#0f1929] border-[#1a2a3a] hover:border-[#00d4c8]/40'
+          ? 'border-bv-accent bg-bv-accent/5 ring-1 ring-bv-accent/20'
+          : 'bg-bv-surface border-bv-border hover:border-bv-accent/30'
       }`}
     >
       <div className="flex items-start gap-4">
-        {/* Avatar */}
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-            selected ? 'bg-[#00d4c8]/20' : 'bg-white/5'
+          className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            selected ? 'bg-bv-accent/15' : 'bg-bv-surface-hover'
           }`}
         >
-          <User size={22} className={selected ? 'text-[#00d4c8]' : 'text-[#8899aa]'} />
+          <User size={20} className={selected ? 'text-bv-accent' : 'text-bv-ink-muted'} />
         </div>
 
-        {/* Info */}
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h4 className="text-white font-bold text-base">{name}</h4>
-            {/* Radio indicator */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-bv-ink font-semibold text-[15px] truncate">{name}</h4>
             <div
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                selected ? 'border-[#00d4c8] bg-[#00d4c8]' : 'border-[#1a2a3a]'
+              className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                selected ? 'border-bv-accent bg-bv-accent' : 'border-bv-border'
               }`}
             >
-              {selected && <div className="w-2 h-2 rounded-full bg-[#0a0f1a]" />}
+              {selected && <div className="w-2 h-2 rounded-full bg-bv-bg" />}
             </div>
           </div>
-          <p className="text-[#8899aa] text-sm mt-1 leading-relaxed">{description}</p>
+          <p className="text-bv-ink-secondary text-[13px] mt-1 leading-relaxed">{description}</p>
         </div>
       </div>
     </div>

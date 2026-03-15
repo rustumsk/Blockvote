@@ -22,8 +22,8 @@ interface SidebarProps {
   variant?: SidebarVariant;
 }
 
-const COLLAPSED_WIDTH = '3rem';
-const EXPANDED_WIDTH = '16rem';
+const COLLAPSED_WIDTH = '3.5rem';
+const EXPANDED_WIDTH = '15rem';
 
 const voterNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/voter/dashboard' },
@@ -37,7 +37,7 @@ const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: Vote, label: 'Elections', path: '/admin/elections' },
   { icon: Users, label: 'Voters', path: '/admin/voters' },
-  { icon: ScrollText, label: 'Blockchain Logs', path: '/admin/logs' },
+  { icon: ScrollText, label: 'Logs', path: '/admin/logs' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
@@ -57,39 +57,37 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
       opacity: isExpanded ? 1 : 0,
       width: isExpanded ? expandedWidth : 0,
       overflow: 'hidden',
-      transition: 'opacity 0.2s ease-out, width 0.2s ease-out',
+      transition: 'opacity 0.15s ease-out, width 0.15s ease-out',
       transitionDelay: isExpanded ? delay : '0s',
       whiteSpace: 'nowrap' as const,
     });
 
   return (
     <aside
-      className="fixed left-0 top-0 bottom-0 flex flex-col bg-[#0f1929] border-r border-[#1a2a3a] z-40 overflow-hidden"
+      className="fixed left-0 top-0 bottom-0 flex flex-col bg-bv-bg border-r border-bv-border z-40 overflow-hidden"
       style={{
         width: isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
-        transition: 'width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isExpanded ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
     >
-      {/* Logo */}
-      <div className="flex-shrink-0 p-4 border-b border-[#1a2a3a]">
-        <Link to="/" className="flex items-center gap-3 min-w-0 text-white no-underline">
-          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
-            <Box size={20} className="text-[#0a0f1a]" />
+      <div className="flex-shrink-0 p-3 border-b border-bv-border">
+        <Link to="/" className="flex items-center gap-2.5 min-w-0 text-bv-ink no-underline">
+          <div className="w-8 h-8 rounded-lg bg-bv-accent flex items-center justify-center flex-shrink-0">
+            <Box size={16} className="text-bv-bg" />
           </div>
           <div className="min-w-0 overflow-hidden">
             <div
-              className="font-bold text-base tracking-wide overflow-hidden transition-all duration-200 ease-out"
-              style={labelStyle('0.08s', '7.5rem')}
+              className="font-bold text-sm tracking-wide overflow-hidden transition-all duration-150 ease-out"
+              style={labelStyle('0.06s', '7rem')}
             >
               BLOCKVOTE
             </div>
             {variant === 'admin' && (
               <div
-                className="text-[#556677] text-xs mt-0.5 overflow-hidden transition-all duration-200 ease-out"
-                style={labelStyle('0.1s', '5.5rem')}
+                className="text-bv-ink-muted text-[10px] mt-0.5 overflow-hidden transition-all duration-150 ease-out"
+                style={labelStyle('0.08s', '5rem')}
               >
                 Admin Panel
               </div>
@@ -98,8 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
         </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -107,16 +104,16 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 min-w-0 ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 min-w-0 ${
                 isActive
-                  ? 'text-[#00d4c8] bg-[#00d4c8]/10 border-l-2 border-[#00d4c8]'
-                  : 'text-[#8899aa] hover:text-white hover:bg-white/5'
+                  ? 'text-bv-accent bg-bv-accent-muted'
+                  : 'text-bv-ink-secondary hover:text-bv-ink hover:bg-bv-surface'
               }`}
             >
-              <Icon size={18} className="flex-shrink-0" />
+              <Icon size={17} className="flex-shrink-0" />
               <span
-                className="overflow-hidden transition-all duration-200 ease-out"
-                style={labelStyle('0.1s')}
+                className="overflow-hidden transition-all duration-150 ease-out"
+                style={labelStyle('0.08s')}
               >
                 {item.label}
               </span>
@@ -125,51 +122,50 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
         })}
       </nav>
 
-      {/* Bottom — user & wallet */}
-      <div className="p-3 border-t border-[#1a2a3a] space-y-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-[#00d4c8]/20 flex items-center justify-center flex-shrink-0">
-            <User size={16} className="text-[#00d4c8]" />
+      <div className="p-2.5 border-t border-bv-border space-y-2">
+        <div className="flex items-center gap-2.5 min-w-0 px-1">
+          <div className="w-7 h-7 rounded-lg bg-bv-accent-muted flex items-center justify-center flex-shrink-0">
+            <User size={14} className="text-bv-accent" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <div
-              className="text-white text-sm font-medium truncate overflow-hidden transition-all duration-200 ease-out"
-              style={labelStyle('0.12s', '8rem')}
+              className="text-bv-ink text-[13px] font-medium truncate overflow-hidden transition-all duration-150 ease-out"
+              style={labelStyle('0.1s', '8rem')}
             >
               {user?.name ?? 'Guest'}
             </div>
             {variant === 'admin' ? (
-              <span className="mt-0.5 block overflow-hidden transition-all duration-200 ease-out" style={labelStyle('0.14s', '3.5rem')}>
-                <Badge variant="admin">ADMIN</Badge>
+              <span className="mt-0.5 block overflow-hidden transition-all duration-150 ease-out" style={labelStyle('0.12s', '3.5rem')}>
+                <Badge variant="admin">Admin</Badge>
               </span>
             ) : (
               <div
-                className="text-[#556677] text-xs font-mono truncate overflow-hidden transition-all duration-200 ease-out"
-                style={labelStyle('0.14s', '5.5rem')}
+                className="text-bv-ink-muted text-[10px] font-mono truncate overflow-hidden transition-all duration-150 ease-out"
+                style={labelStyle('0.12s', '5.5rem')}
               >
-                {walletShort ?? 'No wallet linked'}
+                {walletShort ?? 'No wallet'}
               </div>
             )}
           </div>
         </div>
         <div
-          className="overflow-hidden transition-all duration-200 ease-out"
-          style={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? '100%' : 0, transitionDelay: isExpanded ? '0.14s' : '0s' }}
+          className="overflow-hidden transition-all duration-150 ease-out"
+          style={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? '100%' : 0, transitionDelay: isExpanded ? '0.12s' : '0s' }}
         >
           <ConnectWalletButton variant="outline" size="sm" fullWidth showIcon={true} />
         </div>
         <button
           type="button"
-          className="flex items-center gap-3 w-full text-left text-[#8899aa] hover:text-red-400 text-sm font-medium py-2 rounded-lg hover:bg-white/5 -mx-1 px-3 transition-colors"
+          className="flex items-center gap-2.5 w-full text-left text-bv-ink-muted hover:text-red-400 text-[13px] font-medium py-2 rounded-xl hover:bg-red-500/5 px-3 transition-colors"
           onClick={() => {
             logout();
             navigate('/');
           }}
         >
-          <LogOut size={16} className="flex-shrink-0" />
+          <LogOut size={15} className="flex-shrink-0" />
           <span
-            className="overflow-hidden transition-all duration-200 ease-out"
-            style={labelStyle('0.16s', '3.5rem')}
+            className="overflow-hidden transition-all duration-150 ease-out"
+            style={labelStyle('0.14s', '3.5rem')}
           >
             Log out
           </span>

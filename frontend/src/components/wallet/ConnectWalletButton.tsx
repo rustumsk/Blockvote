@@ -10,7 +10,7 @@ import {
 } from '../../utils/wallet';
 
 const MetaMaskIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M36.2 3L21.9 13.4l2.7-6.3L36.2 3z" fill="#E2761B" stroke="#E2761B" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M3.8 3l14.2 10.5-2.6-6.4L3.8 3z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M30.9 28.4l-3.8 5.8 8.1 2.2 2.3-7.9-6.6-.1zM2.6 28.5l2.3 7.9 8.1-2.2-3.8-5.8-6.6.1z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round" />
@@ -59,7 +59,7 @@ export default function ConnectWalletButton({
         setUser(updated);
       } else {
         setPendingWallet(address);
-        setPendingMessage('Wallet ready. Log in to link it to your account.');
+        setPendingMessage('Wallet ready. Log in to link it.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not connect wallet');
@@ -75,7 +75,7 @@ export default function ConnectWalletButton({
 
   if (alreadyConnected) {
     return (
-      <span className="inline-flex items-center gap-2 font-mono text-sm text-[#8899aa]" title={user.walletAddress ?? undefined}>
+      <span className="inline-flex items-center gap-2 font-mono text-xs text-bv-ink-secondary" title={user.walletAddress ?? undefined}>
         {showIcon && <MetaMaskIcon />}
         {shortAddress}
       </span>
@@ -97,7 +97,7 @@ export default function ConnectWalletButton({
         {isConnecting ? 'Connecting...' : 'Connect Wallet'}
       </Button>
       {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
-      {pendingMessage && <p className="mt-1.5 text-xs text-[#00d4c8]">{pendingMessage}</p>}
+      {pendingMessage && <p className="mt-1.5 text-xs text-bv-accent">{pendingMessage}</p>}
     </div>
   );
 }

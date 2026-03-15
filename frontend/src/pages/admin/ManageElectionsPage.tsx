@@ -93,16 +93,26 @@ const ManageElectionsPage = () => {
     }
   };
 
+  const handleDeleteElection = async (id: string, title: string) => {
+    if (!window.confirm(`Delete election "${title}"? This cannot be undone.`)) return;
+    try {
+      await electionsApi.delete(id);
+      setElections((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex">
+    <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
       <main className="ml-12 flex-1 p-8 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Manage Elections</h1>
-            <p className="text-[#8899aa] text-sm mt-1">Create, edit, and monitor all elections</p>
+            <h1 className="text-2xl font-bold text-bv-ink">Manage Elections</h1>
+            <p className="text-bv-ink-secondary text-sm mt-1">Create, edit, and monitor all elections</p>
           </div>
           <Button variant="primary" onClick={() => setShowModal(true)}>
             <Plus size={16} />
@@ -111,13 +121,13 @@ const ManageElectionsPage = () => {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-[#0f1929] border border-[#1a2a3a] rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === tab.key ? 'bg-[#00d4c8] text-black' : 'text-[#8899aa] hover:text-white'
+                activeTab === tab.key ? 'bg-bv-accent text-bv-bg' : 'text-bv-ink-secondary hover:text-bv-ink'
               }`}
             >
               {tab.label}
@@ -132,39 +142,42 @@ const ManageElectionsPage = () => {
         )}
 
         {loading ? (
-          <div className="text-center py-16 text-[#556677]">Loading elections...</div>
+          <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : (
-          <div className="bg-[#0f1929] border border-[#1a2a3a] rounded-xl overflow-hidden">
+          <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#1a2a3a]">
+                <tr className="border-b border-bv-border">
                   {['Title', 'Status', 'Start Date', 'End Date', 'Candidates', 'Actions'].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left text-xs text-[#556677] uppercase tracking-wide font-medium">
+                    <th key={h} className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1a2a3a]">
+              <tbody className="divide-y divide-bv-border">
                 {filtered.map((el) => (
-                  <tr key={el.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-5 py-4 text-white text-sm font-medium">{el.title}</td>
+                  <tr key={el.id} className="hover:bg-bv-surface-hover/50 transition-colors">
+                    <td className="px-5 py-4 text-bv-ink text-sm font-medium">{el.title}</td>
                     <td className="px-5 py-4"><Badge variant={statusToVariant(el.status)} /></td>
-                    <td className="px-5 py-4 text-[#8899aa] text-sm">{formatDate(el.startDate)}</td>
-                    <td className="px-5 py-4 text-[#8899aa] text-sm">{formatDate(el.endDate)}</td>
-                    <td className="px-5 py-4 text-[#8899aa] text-sm">{el.candidateCount}</td>
+                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.startDate)}</td>
+                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.endDate)}</td>
+                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">{el.candidateCount}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <Link to={`/admin/elections/${el.id}`} className="p-1.5 text-[#8899aa] hover:text-white rounded hover:bg-white/5 transition-colors">
+                        <Link to={`/admin/elections/${el.id}`} className="p-1.5 text-bv-ink-secondary hover:text-bv-ink rounded hover:bg-bv-surface-hover transition-colors">
                           <Eye size={15} />
                         </Link>
-                        <button className="p-1.5 text-[#8899aa] hover:text-[#00d4c8] rounded hover:bg-white/5 transition-colors">
+                        <button className="p-1.5 text-bv-ink-secondary hover:text-bv-accent rounded hover:bg-bv-surface-hover transition-colors">
                           <Edit size={15} />
                         </button>
-                        <button className="p-1.5 text-[#8899aa] hover:text-yellow-400 rounded hover:bg-white/5 transition-colors">
+                        <button className="p-1.5 text-bv-ink-secondary hover:text-yellow-400 rounded hover:bg-bv-surface-hover transition-colors">
                           <Pause size={15} />
                         </button>
-                        <button className="p-1.5 text-[#8899aa] hover:text-red-400 rounded hover:bg-white/5 transition-colors">
+                        <button
+                          className="p-1.5 text-bv-ink-secondary hover:text-red-400 rounded hover:bg-bv-surface-hover transition-colors"
+                          onClick={() => handleDeleteElection(el.id, el.title)}
+                        >
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -189,13 +202,13 @@ const ManageElectionsPage = () => {
             />
 
             <div>
-              <label className="block text-xs text-[#556677] uppercase tracking-wide mb-1.5">
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
                 Description
               </label>
               <textarea
                 rows={3}
                 placeholder="Describe the purpose of this election..."
-                className="bg-[#0a0f1a] border border-[#1a2a3a] rounded-lg px-4 py-3 text-white placeholder-[#556677] focus:border-[#00d4c8] focus:outline-none w-full resize-none transition-colors"
+                className="bg-bv-bg border border-bv-border rounded-lg px-4 py-3 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full resize-none transition-colors"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
               />
