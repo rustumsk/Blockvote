@@ -31,14 +31,22 @@ export const authService = {
   },
 
   async verifyEmail(token: string) {
-    const user = await prisma.user.findFirst({ where: { verifyToken: token } })
-    if (!user) throw new Error('Invalid or expired verification token')
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { isVerified: true, verifyToken: null },
+    const result = await prisma.user.updateMany({
+      where: {
+        verifyToken: token,
+        isVerified: false
+      },
+      data: {
+        isVerified: true,
+        verifyToken: null
+      }
     })
-    return { message: 'Email verified successfully' }
+
+    if (result.count === 0) {
+      return { message: "Token already used or invalid" }
+    }
+
+    return { message: "Email verified successfully" }
   },
 
   async login(email: string, password: string) {
