@@ -50,4 +50,17 @@ export const electionsController = {
       res.status(500).json({ message: (e as Error).message })
     }
   },
+
+  async delete(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params
+      const result = await electionsService.delete(id)
+      res.json(result)
+    } catch (e) {
+      if ((e as Error).message === 'Election not found') {
+        return res.status(404).json({ message: 'Election not found' })
+      }
+      res.status(500).json({ message: (e as Error).message })
+    }
+  },
 }

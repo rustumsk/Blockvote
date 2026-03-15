@@ -5,6 +5,8 @@ import { errorHandler } from './middleware/errorHandler'
 import authRoutes from './modules/auth/auth.routes'
 import usersRoutes from './modules/users/users.routes'
 import electionsRoutes from './modules/elections/elections.routes'
+import votesRoutes from './modules/votes/votes.routes'
+import resultsRoutes from './modules/results/results.routes'
 
 dotenv.config()
 
@@ -16,6 +18,8 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/elections', electionsRoutes)
+app.use('/api/votes', votesRoutes)
+app.use('/api/results', resultsRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Blockvote API running' })

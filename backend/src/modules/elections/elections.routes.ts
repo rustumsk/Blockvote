@@ -10,5 +10,6 @@ router.get('/', electionsController.getList.bind(electionsController))
 router.post('/', authenticate, requireAdmin, electionsController.create.bind(electionsController))
 router.use('/:electionId/candidates', candidatesRoutes)
 router.get('/:id', electionsController.getById.bind(electionsController))
+router.delete('/:id', authenticate, requireAdmin, electionsController.delete.bind(electionsController))
 
 export default router

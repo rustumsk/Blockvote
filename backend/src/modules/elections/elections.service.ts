@@ -132,4 +132,17 @@ export const electionsService = {
     const { _count, ...e } = created
     return { ...e, candidateCount: _count.candidates }
   },
+
+  async delete(id: string) {
+    const election = await prisma.election.findUnique({ where: { id } })
+    if (!election) throw new Error('Election not found')
+
+    await prisma.$transaction([
+      prisma.vote.deleteMany({ where: { electionId: id } }),
+      prisma.candidate.deleteMany({ where: { electionId: id } }),
+      prisma.election.delete({ where: { id } }),
+    ])
+
+    return { message: 'Election deleted successfully' }
+  },
 }
