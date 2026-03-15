@@ -64,4 +64,66 @@ export const authApi = {
       token: getToken(),
     })
   },
+
+  updateProfile(body: { name?: string; phone?: string | null }) {
+    return api<User>('/api/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
+
+  deleteAccount() {
+    return api<{ message: string }>('/api/auth/account', {
+      method: 'DELETE',
+      token: getToken(),
+    })
+  },
+}
+
+export type UsersListResponse = {
+  users: User[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const usersApi = {
+  getUsers(params?: { status?: string; search?: string; page?: number; limit?: number }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    if (params?.search) sp.set('search', params.search)
+    if (params?.page != null) sp.set('page', String(params.page))
+    if (params?.limit != null) sp.set('limit', String(params.limit))
+    const qs = sp.toString()
+    return api<UsersListResponse>(`/api/users${qs ? `?${qs}` : ''}`, { token: getToken() })
+  },
+
+  approveUser(id: string) {
+    return api<{ message: string }>(`/api/users/${id}/approve`, {
+      method: 'PATCH',
+      token: getToken(),
+    })
+  },
+
+  rejectUser(id: string) {
+    return api<{ message: string }>(`/api/users/${id}/reject`, {
+      method: 'PATCH',
+      token: getToken(),
+    })
+  },
+
+  revokeUser(id: string) {
+    return api<{ message: string }>(`/api/users/${id}/revoke`, {
+      method: 'PATCH',
+      token: getToken(),
+    })
+  },
+
+  deleteUser(id: string) {
+    return api<{ message: string }>(`/api/users/${id}`, {
+      method: 'DELETE',
+      token: getToken(),
+    })
+  },
 }
