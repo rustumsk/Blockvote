@@ -9,5 +9,7 @@ router.get('/verify-email', authController.verifyEmail.bind(authController))
 router.post('/login', authController.login.bind(authController))
 router.get('/me', authenticate, authController.me.bind(authController))
 router.patch('/wallet', authenticate, authController.updateWallet.bind(authController))
+router.patch('/profile', authenticate, authController.updateProfile.bind(authController))
+router.delete('/account', authenticate, authController.deleteAccount.bind(authController))
 
 export default router

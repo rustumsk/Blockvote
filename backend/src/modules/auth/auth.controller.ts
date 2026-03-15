@@ -70,4 +70,27 @@ export const authController = {
       return res.status(500).json({ message })
     }
   },
+
+  async updateProfile(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
+      const { name, phone } = req.body
+      const user = await authService.updateProfile(req.user.id, { name, phone })
+      return res.json(user)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile'
+      return res.status(500).json({ message })
+    }
+  },
+
+  async deleteAccount(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
+      await authService.deleteAccount(req.user.id)
+      return res.json({ message: 'Account deleted successfully' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete account'
+      return res.status(500).json({ message })
+    }
+  },
 }

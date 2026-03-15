@@ -5,6 +5,19 @@ import { sendVerificationEmail } from '../../utils/sendEmail'
 
 const SALT_ROUNDS = 10
 
+const profileSelect = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+  status: true,
+  walletAddress: true,
+  isVerified: true,
+  createdAt: true,
+  updatedAt: true,
+}
+
 export const authService = {
   async register(data: { name: string; email: string; password: string; phone?: string }) {
     const existing = await prisma.user.findUnique({ where: { email: data.email } })
@@ -75,18 +88,7 @@ export const authService = {
   async me(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        status: true,
-        walletAddress: true,
-        isVerified: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: profileSelect,
     })
     if (!user) throw new Error('User not found')
     return user
@@ -96,19 +98,29 @@ export const authService = {
     const user = await prisma.user.update({
       where: { id: userId },
       data: { walletAddress },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        status: true,
-        walletAddress: true,
-        isVerified: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: profileSelect,
     })
     return user
+  },
+
+  async updateProfile(userId: string, data: { name?: string; phone?: string | null }) {
+    const update: { name?: string; phone?: string | null } = {}
+    if (data.name !== undefined && data.name.trim()) update.name = data.name.trim()
+    if (data.phone !== undefined) update.phone = data.phone === '' ? null : data.phone
+    if (Object.keys(update).length === 0) return authService.me(userId)
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: update,
+      select: profileSelect,
+    })
+    return user
+  },
+
+  async deleteAccount(userId: string) {
+    await prisma.$transaction([
+      prisma.vote.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ])
+    return { message: 'Account deleted successfully' }
   },
 }

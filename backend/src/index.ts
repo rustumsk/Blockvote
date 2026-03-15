@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { errorHandler } from './middleware/errorHandler'
 import authRoutes from './modules/auth/auth.routes'
+import usersRoutes from './modules/users/users.routes'
 
 dotenv.config()
 
@@ -12,6 +13,7 @@ app.use(cors({ origin: true, credentials: true }))
 app.use(express.json())
 
 app.use('/api/auth', authRoutes)
+app.use('/api/users', usersRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Blockvote API running' })
