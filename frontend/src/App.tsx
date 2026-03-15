@@ -9,6 +9,7 @@ import ElectionsPage from './pages/voter/ElectionsPage';
 import VotePage from './pages/voter/VotePage';
 import ReceiptPage from './pages/voter/ReceiptPage';
 import VerifyPage from './pages/voter/VerifyPage';
+import ProfilePage from './pages/voter/ProfilePage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageElectionsPage from './pages/admin/ManageElectionsPage';
 import ManageVotersPage from './pages/admin/ManageVotersPage';
@@ -31,6 +32,7 @@ function App() {
         <Route path="/voter/elections/:id/vote" element={<VotePage />} />
         <Route path="/voter/receipt" element={<ReceiptPage />} />
         <Route path="/voter/verify" element={<VerifyPage />} />
+        <Route path="/voter/profile" element={<ProfilePage />} />
 
         {/* Admin */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
