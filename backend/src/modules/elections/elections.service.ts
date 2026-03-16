@@ -54,6 +54,8 @@ export const electionsService = {
       endDate: e.endDate,
       status: e.status,
       contractElectionId: e.contractElectionId,
+      resultsPublished: e.resultsPublished,
+      resultsPublishedAt: e.resultsPublishedAt,
       createdAt: e.createdAt,
       updatedAt: e.updatedAt,
       candidateCount: (e as { _count?: { candidates: number } })._count?.candidates ?? 0,

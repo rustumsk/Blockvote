@@ -5,15 +5,21 @@ import { authService } from './auth.service'
 export const authController = {
   async register(req: AuthRequest, res: Response) {
     try {
-      const { name, email, password, phone } = req.body
-      if (!name || !email || !password) {
-        return res.status(400).json({ message: 'Name, email and password are required' })
+      const { name, email, password, phone, walletAddress } = req.body
+      if (!name || !email || !password || !walletAddress) {
+        return res.status(400).json({ message: 'Name, email, password and walletAddress are required' })
       }
-      const data = await authService.register({ name, email, password, phone })
+      const data = await authService.register({ name, email, password, phone, walletAddress })
       return res.status(201).json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed'
-      const status = message === 'Email already registered' ? 409 : 400
+      const invalidAddress = message.toLowerCase().includes('invalid address')
+      const status =
+        message === 'Email already registered' || message === 'Wallet already registered'
+          ? 409
+          : invalidAddress
+            ? 400
+            : 400
       return res.status(status).json({ message })
     }
   },
@@ -45,6 +51,52 @@ export const authController = {
     }
   },
 
+  async walletNonce(req: AuthRequest, res: Response) {
+    try {
+      const { walletAddress } = req.body
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: 'walletAddress is required' })
+      }
+      const data = await authService.createWalletLoginNonce(walletAddress.trim())
+      return res.json(data)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to prepare wallet login'
+      const invalidAddress = message.toLowerCase().includes('invalid address')
+      const status =
+        message === 'No account is linked to this wallet'
+          ? 404
+          : message.includes('verify your email')
+            ? 403
+            : invalidAddress
+              ? 400
+              : 400
+      return res.status(status).json({ message })
+    }
+  },
+
+  async walletLogin(req: AuthRequest, res: Response) {
+    try {
+      const { walletAddress, signature } = req.body
+      if (!walletAddress || !signature || typeof walletAddress !== 'string' || typeof signature !== 'string') {
+        return res.status(400).json({ message: 'walletAddress and signature are required' })
+      }
+      const data = await authService.loginWithWallet(walletAddress.trim(), signature.trim())
+      return res.json(data)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Wallet login failed'
+      const invalidAddress = message.toLowerCase().includes('invalid address')
+      const status =
+        message === 'No account is linked to this wallet'
+          ? 404
+          : message.includes('verify your email')
+            ? 403
+            : invalidAddress || message.includes('expired') || message.includes('verified')
+              ? 400
+              : 401
+      return res.status(status).json({ message })
+    }
+  },
+
   async me(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
@@ -67,7 +119,17 @@ export const authController = {
       return res.json(user)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update wallet'
-      return res.status(500).json({ message })
+      const invalidAddress = message.toLowerCase().includes('invalid address')
+      const status =
+        message === 'User not found'
+          ? 404
+          : message === 'This wallet is already linked to another account' ||
+              invalidAddress
+            ? 400
+            : message === 'Voting contract is not configured'
+              ? 503
+              : 500
+      return res.status(status).json({ message })
     }
   },
 

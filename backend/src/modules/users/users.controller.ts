@@ -55,7 +55,15 @@ export const usersController = {
       return res.json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to approve user'
-      return res.status(message === 'User not found' ? 404 : 500).json({ message })
+      const status =
+        message === 'User not found'
+          ? 404
+          : message === 'Voter must link a wallet before approval'
+            ? 400
+            : message === 'Voting contract is not configured'
+              ? 503
+              : 500
+      return res.status(status).json({ message })
     }
   },
 
@@ -68,7 +76,13 @@ export const usersController = {
       return res.json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reject user'
-      return res.status(message === 'User not found' ? 404 : 500).json({ message })
+      const status =
+        message === 'User not found'
+          ? 404
+          : message === 'Voting contract is not configured'
+            ? 503
+            : 500
+      return res.status(status).json({ message })
     }
   },
 
@@ -81,7 +95,13 @@ export const usersController = {
       return res.json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to revoke user'
-      return res.status(message === 'User not found' ? 404 : 500).json({ message })
+      const status =
+        message === 'User not found'
+          ? 404
+          : message === 'Voting contract is not configured'
+            ? 503
+            : 500
+      return res.status(status).json({ message })
     }
   },
 }

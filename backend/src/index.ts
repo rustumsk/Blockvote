@@ -1,4 +1,5 @@
 import express from 'express'
+import http from 'http'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { errorHandler } from './middleware/errorHandler'
@@ -7,10 +8,12 @@ import usersRoutes from './modules/users/users.routes'
 import electionsRoutes from './modules/elections/elections.routes'
 import votesRoutes from './modules/votes/votes.routes'
 import resultsRoutes from './modules/results/results.routes'
+import { initSocketServer } from './socket'
 
 dotenv.config()
 
 const app = express()
+const server = http.createServer(app)
 
 app.use(cors({ origin: true, credentials: true }))
 app.use(express.json())
@@ -28,6 +31,8 @@ app.get('/api/health', (_req, res) => {
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 5000
-app.listen(PORT, () => {
+initSocketServer(server)
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })

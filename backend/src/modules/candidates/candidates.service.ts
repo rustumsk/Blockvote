@@ -1,5 +1,10 @@
 import prisma from '../../config/db'
 import { getContract } from '../../config/contract'
+import {
+  getCandidatePhotoBuffer,
+  type UploadedPhotoFile,
+  uploadCandidatePhoto,
+} from '../../config/s3'
 
 export const candidatesService = {
   async getList(electionId: string) {
@@ -14,7 +19,15 @@ export const candidatesService = {
     })
   },
 
-  async create(electionId: string, data: { name: string; description?: string | null }) {
+  async create(
+    electionId: string,
+    data: {
+      name: string
+      description?: string | null
+      credentials?: string | null
+      photoFile?: UploadedPhotoFile
+    }
+  ) {
     const election = await prisma.election.findUnique({
       where: { id: electionId },
     })
@@ -22,10 +35,14 @@ export const candidatesService = {
     if (election.status !== 'UPCOMING') {
       throw new Error('Candidates can only be added to elections with status UPCOMING')
     }
+    const uploadedPhoto = data.photoFile ? await uploadCandidatePhoto(data.photoFile) : null
+
     const candidate = await prisma.candidate.create({
       data: {
         name: data.name.trim(),
         description: data.description?.trim() || null,
+        credentials: data.credentials?.trim() || null,
+        photoUrl: uploadedPhoto?.url || null,
         electionId,
       },
     })
@@ -34,7 +51,8 @@ export const candidatesService = {
     let contractCandidateId: number | null = null
     if (contract && contractElectionId != null) {
       try {
-        const tx = await contract.addCandidate(
+        const addCandidate = contract.getFunction('addCandidate')
+        const tx = await addCandidate(
           contractElectionId,
           data.name.trim(),
           data.description?.trim() ?? ''
@@ -72,5 +90,22 @@ export const candidatesService = {
     return prisma.candidate.findUnique({
       where: { id: candidate.id },
     })!
+  },
+
+  async getPhoto(electionId: string, candidateId: string) {
+    const candidate = await prisma.candidate.findFirst({
+      where: {
+        id: candidateId,
+        electionId,
+      },
+      select: {
+        photoUrl: true,
+      },
+    })
+
+    if (!candidate) throw new Error('Candidate not found')
+    if (!candidate.photoUrl) throw new Error('Candidate photo not found')
+
+    return getCandidatePhotoBuffer(candidate.photoUrl)
   },
 }

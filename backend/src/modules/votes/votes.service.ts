@@ -1,4 +1,7 @@
 import prisma from '../../config/db'
+import { getContract } from '../../config/contract'
+import { resultsService } from '../results/results.service'
+import { emitElectionResults } from '../../socket'
 
 export const votesService = {
   async recordVote(userId: string, electionId: string, candidateId: string, txHash: string) {
@@ -35,6 +38,9 @@ export const votesService = {
         user: true,
       },
     })
+
+    const latestResults = await resultsService.getElectionResults(electionId)
+    emitElectionResults(electionId, latestResults)
 
     return vote
   },

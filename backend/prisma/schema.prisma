@@ -30,6 +30,8 @@ model Election {
   endDate            DateTime
   status             ElectionStatus  @default(UPCOMING)
   contractElectionId Int?
+  resultsPublished   Boolean         @default(false)
+  resultsPublishedAt DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   candidates         Candidate[]
@@ -40,6 +42,8 @@ model Candidate {
   id                  String   @id @default(uuid())
   name                String
   description         String?
+  credentials         String?
+  photoUrl            String?
   electionId          String
   contractCandidateId Int?
   createdAt           DateTime @default(now())

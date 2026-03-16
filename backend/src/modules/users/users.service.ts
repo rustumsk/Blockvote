@@ -14,6 +14,25 @@ const userListSelect = {
   updatedAt: true,
 }
 
+async function isWalletApprovedOnChain(walletAddress: string) {
+  const contract = getContract()
+  if (!contract) throw new Error('Voting contract is not configured')
+
+  try {
+    const isApproved = await contract.getFunction('isVoterApproved')(walletAddress)
+    return Boolean(isApproved)
+  } catch {
+    const voter = await contract.getFunction('voters')(walletAddress)
+    if (Array.isArray(voter)) {
+      return Boolean(voter[0])
+    }
+    if (typeof voter === 'object' && voter != null && 'isApproved' in voter) {
+      return Boolean((voter as { isApproved?: boolean }).isApproved)
+    }
+    return false
+  }
+}
+
 export const usersService = {
   async getUsers(query: { status?: string; search?: string; page?: number; limit?: number }) {
     const page = Math.max(1, query.page ?? 1)
@@ -68,26 +87,39 @@ export const usersService = {
   async approveUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+    if (!user.walletAddress) throw new Error('Voter must link a wallet before approval')
+
+    const contract = getContract()
+    if (!contract) throw new Error('Voting contract is not configured')
+
+    const approvedOnChain = await isWalletApprovedOnChain(user.walletAddress)
+    if (!approvedOnChain) {
+      const tx = await contract.getFunction('approveVoter')(user.walletAddress)
+      await tx.wait()
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { status: 'APPROVED' },
     })
-    const contract = getContract()
-    if (contract && user.walletAddress) {
-      try {
-        const tx = await contract.approveVoter(user.walletAddress)
-        await tx.wait()
-      } catch (e) {
-        console.error('Contract approveVoter failed:', e)
-        // DB already updated; log and continue
-      }
-    }
     return { message: 'Voter approved' }
   },
 
   async rejectUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+
+    if (user.status === 'APPROVED' && user.walletAddress) {
+      const contract = getContract()
+      if (!contract) throw new Error('Voting contract is not configured')
+
+      const approvedOnChain = await isWalletApprovedOnChain(user.walletAddress)
+      if (approvedOnChain) {
+        const tx = await contract.getFunction('revokeVoter')(user.walletAddress)
+        await tx.wait()
+      }
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { status: 'REJECTED' },
@@ -98,19 +130,22 @@ export const usersService = {
   async revokeUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+
+    if (user.walletAddress) {
+      const contract = getContract()
+      if (!contract) throw new Error('Voting contract is not configured')
+
+      const approvedOnChain = await isWalletApprovedOnChain(user.walletAddress)
+      if (approvedOnChain) {
+        const tx = await contract.getFunction('revokeVoter')(user.walletAddress)
+        await tx.wait()
+      }
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { status: 'PENDING' },
     })
-    const contract = getContract()
-    if (contract && user.walletAddress) {
-      try {
-        const tx = await contract.revokeVoter(user.walletAddress)
-        await tx.wait()
-      } catch (e) {
-        console.error('Contract revokeVoter failed:', e)
-      }
-    }
     return { message: 'Voter revoked' }
   },
 }

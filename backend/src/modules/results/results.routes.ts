@@ -7,6 +7,7 @@ const router = Router()
 
 router.get('/:electionId', resultsController.getResults.bind(resultsController))
 router.get('/:electionId/logs', authenticate, requireAdmin, resultsController.getLogs.bind(resultsController))
+router.post('/:electionId/publish', authenticate, requireAdmin, resultsController.publish.bind(resultsController))
 
 export default router
 
