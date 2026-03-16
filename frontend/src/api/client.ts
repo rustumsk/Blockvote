@@ -22,9 +22,12 @@ export async function api<T>(
   options: RequestInit & { token?: string | null } = {}
 ): Promise<T> {
   const { token = getToken(), ...rest } = options
+  const isFormData = typeof FormData !== 'undefined' && rest.body instanceof FormData
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
     ...((rest.headers as Record<string, string>) || {}),
+  }
+  if (!isFormData) {
+    ;(headers as Record<string, string>)['Content-Type'] = 'application/json'
   }
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`
 
@@ -35,7 +38,7 @@ export async function api<T>(
 }
 
 export const authApi = {
-  register(body: { name: string; email: string; password: string; phone?: string }) {
+  register(body: { name: string; email: string; password: string; phone?: string; walletAddress: string }) {
     return api<{ message: string }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -48,6 +51,20 @@ export const authApi = {
 
   login(body: { email: string; password: string }) {
     return api<{ token: string; user: User }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+
+  requestWalletLoginNonce(walletAddress: string) {
+    return api<{ walletAddress: string; message: string }>('/api/auth/wallet/nonce', {
+      method: 'POST',
+      body: JSON.stringify({ walletAddress }),
+    })
+  },
+
+  loginWithWallet(body: { walletAddress: string; signature: string }) {
+    return api<{ token: string; user: User }>('/api/auth/wallet/login', {
       method: 'POST',
       body: JSON.stringify(body),
     })
@@ -138,6 +155,8 @@ export type ElectionListItem = {
   endDate: string
   status: ElectionStatus
   contractElectionId?: number | null
+  resultsPublished?: boolean
+  resultsPublishedAt?: string | null
   createdAt?: string
   updatedAt?: string
   candidateCount: number
@@ -147,13 +166,33 @@ export type Candidate = {
   id: string
   name: string
   description?: string | null
+  credentials?: string | null
+  photoUrl?: string | null
   electionId: string
   contractCandidateId?: number | null
   createdAt?: string
 }
 
+export function getCandidatePhotoSrc(candidate: Pick<Candidate, 'id' | 'electionId' | 'photoUrl'>) {
+  if (!candidate.photoUrl) return null
+  return `${API_BASE}/api/elections/${candidate.electionId}/candidates/${candidate.id}/photo`
+}
+
 export type ElectionDetail = ElectionListItem & {
   candidates: Candidate[]
+}
+
+export type ElectionResults = {
+  candidates: { candidateId: string; name: string; voteCount: number }[]
+  winner: { candidateId: string; name: string; voteCount: number } | null
+  totalVotes: number
+  published: boolean
+  publishedAt: string | null
+  statistics: {
+    candidateCount: number
+    approvedVoterCount: number
+    turnoutPercentage: number
+  }
 }
 
 export const electionsApi = {
@@ -189,10 +228,19 @@ export const candidatesApi = {
     return api<Candidate[]>(`/api/elections/${electionId}/candidates`)
   },
 
-  create(electionId: string, body: { name: string; description?: string }) {
+  create(
+    electionId: string,
+    body: { name: string; description?: string; credentials?: string; photo?: File | null }
+  ) {
+    const formData = new FormData()
+    formData.append('name', body.name)
+    if (body.description) formData.append('description', body.description)
+    if (body.credentials) formData.append('credentials', body.credentials)
+    if (body.photo) formData.append('photo', body.photo)
+
     return api<Candidate>(`/api/elections/${electionId}/candidates`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: formData,
       token: getToken(),
     })
   },
@@ -242,11 +290,7 @@ export const votesApi = {
 
 export const resultsApi = {
   getElectionResults(electionId: string) {
-    return api<{
-      candidates: { contractCandidateId: number; name: string; voteCount: number }[]
-      winner: { contractCandidateId: number; name: string; voteCount: number } | null
-      totalVotes: number
-    }>(`/api/results/${electionId}`)
+    return api<ElectionResults>(`/api/results/${electionId}`)
   },
 
   getElectionLogs(electionId: string) {
@@ -258,5 +302,12 @@ export const resultsApi = {
         timestamp: string
       }[]
     >(`/api/results/${electionId}/logs`, { token: getToken() })
+  },
+
+  publishElectionResults(electionId: string) {
+    return api<{ message: string; results: ElectionResults }>(`/api/results/${electionId}/publish`, {
+      method: 'POST',
+      token: getToken(),
+    })
   },
 }

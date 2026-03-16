@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Trophy } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import Sidebar from '../../components/layout/Sidebar'
 import ElectionCard from '../../components/shared/ElectionCard'
 import { electionsApi, type ElectionListItem } from '../../api/client'
@@ -52,15 +53,24 @@ const ElectionsPage = () => {
             <h1 className="text-2xl font-bold text-bv-ink">Elections</h1>
             <p className="text-bv-ink-secondary text-sm mt-1">Browse and participate in ongoing elections</p>
           </div>
-          <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search elections..."
-              className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
-            />
+          <div className="flex items-center gap-3">
+            <Link
+              to="/published-elections"
+              className="inline-flex items-center gap-2 rounded-xl border border-bv-border px-4 py-2.5 text-sm font-medium text-bv-ink-secondary transition-colors hover:border-bv-accent hover:text-bv-accent"
+            >
+              <Trophy size={15} />
+              Published Results
+            </Link>
+            <div className="relative w-64">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search elections..."
+                className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
+              />
+            </div>
           </div>
         </div>
 

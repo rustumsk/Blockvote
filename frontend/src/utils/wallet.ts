@@ -1,7 +1,9 @@
+import { BrowserProvider } from 'ethers'
+
 declare global {
   interface Window {
     ethereum?: {
-      request(args: { method: string; params?: unknown[] }): Promise<string[]>;
+      request(args: { method: string; params?: unknown[] }): Promise<unknown>;
     };
   }
 }
@@ -45,4 +47,17 @@ export async function requestWalletAddress(): Promise<string> {
     throw new Error('Invalid wallet address')
   }
   return address
+}
+
+export async function signWalletMessage(message: string): Promise<{ address: string; signature: string }> {
+  if (!hasWallet()) {
+    throw new Error('No wallet found. Install MetaMask or another Web3 wallet.')
+  }
+
+  const provider = new BrowserProvider(window.ethereum as NonNullable<typeof window.ethereum>)
+  const signer = await provider.getSigner()
+  const address = await signer.getAddress()
+  const signature = await signer.signMessage(message)
+
+  return { address, signature }
 }

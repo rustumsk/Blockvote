@@ -3,6 +3,7 @@ import { Search, CheckCircle, XCircle, MinusCircle, Trash2 } from 'lucide-react'
 import Sidebar from '../../components/layout/Sidebar';
 import Badge from '../../components/ui/Badge';
 import { usersApi, type User } from '../../api/client';
+import { notifyError, notifySuccess } from '../../lib/toast';
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected';
 type VoterStatus = 'pending' | 'approved' | 'rejected';
@@ -52,16 +53,14 @@ const ManageVotersPage = () => {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    setMessage(null);
     try {
       const { users } = await usersApi.getUsers();
       setVotersList(users.map(toVoter));
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load voters' });
+      notifyError(err instanceof Error ? err.message : 'Failed to load voters');
       setVotersList([]);
     } finally {
       setLoading(false);
@@ -78,13 +77,12 @@ const ManageVotersPage = () => {
 
   const handleApprove = async (voter: Voter) => {
     setActioningId(voter.id);
-    setMessage(null);
     try {
       await usersApi.approveUser(voter.id);
       updateVoterStatus(voter.id, 'approved');
-      setMessage({ type: 'success', text: 'Voter approved.' });
+      notifySuccess('Voter approved.');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to approve' });
+      notifyError(err instanceof Error ? err.message : 'Failed to approve');
     } finally {
       setActioningId(null);
     }
@@ -92,13 +90,12 @@ const ManageVotersPage = () => {
 
   const handleReject = async (voter: Voter) => {
     setActioningId(voter.id);
-    setMessage(null);
     try {
       await usersApi.rejectUser(voter.id);
       updateVoterStatus(voter.id, 'rejected');
-      setMessage({ type: 'success', text: 'Voter rejected.' });
+      notifySuccess('Voter rejected.');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to reject' });
+      notifyError(err instanceof Error ? err.message : 'Failed to reject');
     } finally {
       setActioningId(null);
     }
@@ -106,13 +103,12 @@ const ManageVotersPage = () => {
 
   const handleRevoke = async (voter: Voter) => {
     setActioningId(voter.id);
-    setMessage(null);
     try {
       await usersApi.revokeUser(voter.id);
       updateVoterStatus(voter.id, 'pending');
-      setMessage({ type: 'success', text: 'Voter revoked.' });
+      notifySuccess('Voter revoked.');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to revoke' });
+      notifyError(err instanceof Error ? err.message : 'Failed to revoke');
     } finally {
       setActioningId(null);
     }
@@ -121,13 +117,12 @@ const ManageVotersPage = () => {
   const handleDelete = async (voter: Voter) => {
     if (!window.confirm(`Delete ${voter.name} (${voter.email})? This cannot be undone.`)) return;
     setDeletingId(voter.id);
-    setMessage(null);
     try {
       await usersApi.deleteUser(voter.id);
       setVotersList((prev) => prev.filter((v) => v.id !== voter.id));
-      setMessage({ type: 'success', text: 'User deleted.' });
+      notifySuccess('User deleted.');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete user' });
+      notifyError(err instanceof Error ? err.message : 'Failed to delete user');
     } finally {
       setDeletingId(null);
     }
@@ -162,16 +157,6 @@ const ManageVotersPage = () => {
             />
           </div>
         </div>
-
-        {message && (
-          <div
-            className={`mb-4 p-3 rounded-lg text-sm ${
-              message.type === 'success' ? 'bg-bv-accent-muted text-bv-accent border border-bv-accent/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
 
         <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
           {tabs.map((tab) => (

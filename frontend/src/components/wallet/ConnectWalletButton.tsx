@@ -2,11 +2,11 @@ import { useState } from 'react';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/client';
+import { notifyError, notifyInfo, notifySuccess } from '../../lib/toast';
 import {
   hasWallet,
   requestWalletAddress,
   setPendingWallet,
-  clearPendingWallet,
 } from '../../utils/wallet';
 
 const MetaMaskIcon = () => (
@@ -29,6 +29,7 @@ type ConnectWalletButtonProps = {
   fullWidth?: boolean;
   className?: string;
   showIcon?: boolean;
+  label?: string;
 };
 
 export default function ConnectWalletButton({
@@ -37,32 +38,39 @@ export default function ConnectWalletButton({
   fullWidth = false,
   className = '',
   showIcon = true,
+  label = 'Connect Wallet',
 }: ConnectWalletButtonProps) {
   const { user, token, setUser } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState('');
-  const [pendingMessage, setPendingMessage] = useState('');
 
   const handleConnect = async () => {
     if (!hasWallet()) {
-      setError('Install MetaMask or another Web3 wallet.');
-      setPendingMessage('');
+      notifyError('Install MetaMask or another Web3 wallet.');
       return;
     }
-    setError('');
-    setPendingMessage('');
     setIsConnecting(true);
     try {
       const address = await requestWalletAddress();
       if (token && user) {
+        const linkedWallet = user.walletAddress;
         const updated = await authApi.updateWallet(address);
         setUser(updated);
+        if (
+          linkedWallet &&
+          linkedWallet.toLowerCase() !== updated.walletAddress?.toLowerCase() &&
+          user.status === 'APPROVED' &&
+          updated.status === 'PENDING'
+        ) {
+          notifyInfo('Wallet updated. Admin approval is required again before you can vote.');
+        } else {
+          notifySuccess('Wallet linked successfully.');
+        }
       } else {
         setPendingWallet(address);
-        setPendingMessage('Wallet ready. Log in to link it.');
+        notifyInfo('Wallet connected. Log in to link it to your account.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not connect wallet');
+      notifyError(err instanceof Error ? err.message : 'Could not connect wallet');
     } finally {
       setIsConnecting(false);
     }
@@ -94,10 +102,8 @@ export default function ConnectWalletButton({
         disabled={isConnecting}
       >
         {showIcon && <MetaMaskIcon />}
-        {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+        {isConnecting ? 'Connecting...' : label}
       </Button>
-      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
-      {pendingMessage && <p className="mt-1.5 text-xs text-bv-accent">{pendingMessage}</p>}
     </div>
   );
 }

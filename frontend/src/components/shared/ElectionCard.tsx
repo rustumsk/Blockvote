@@ -15,7 +15,7 @@ interface ElectionCardProps {
   endDate: string;
   candidateCount: number;
   hasVoted?: boolean;
-  role?: 'voter' | 'admin';
+  role?: 'voter' | 'admin' | 'public';
 }
 
 function formatShort(iso: string) {
@@ -61,6 +61,8 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   const endTs = new Date(endDate).getTime();
   const isUpcoming = status === 'upcoming';
   const isActive = status === 'active';
+  const voterDetailHref = `/voter/elections/${id}`;
+  const publicDetailHref = `/elections/${id}`;
 
   let countdownLabel: string | null = null;
   if (isUpcoming) {
@@ -100,9 +102,17 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
 
       <div className="mt-auto pt-1.5 border-t border-bv-border">
         {role === 'admin' ? (
-          <Button variant="ghost" size="sm" fullWidth>
-            Manage
-          </Button>
+          <Link to={`/admin/elections/${id}`} className="block">
+            <Button variant="ghost" size="sm" fullWidth>
+              Manage
+            </Button>
+          </Link>
+        ) : role === 'public' ? (
+          <Link to={publicDetailHref} className="block">
+            <Button variant="ghost" size="sm" fullWidth>
+              View Details
+            </Button>
+          </Link>
         ) : hasVoted ? (
           <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm font-medium py-1.5">
             <CheckCircle size={15} />
@@ -115,7 +125,7 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
             </Button>
           </Link>
         ) : (
-          <Link to={`/voter/elections`} className="block">
+          <Link to={voterDetailHref} className="block">
             <Button variant="ghost" size="sm" fullWidth>
               View Details
             </Button>

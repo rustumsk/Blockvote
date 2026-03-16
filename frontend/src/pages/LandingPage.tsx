@@ -1,10 +1,36 @@
+import { useEffect } from 'react';
 import { Shield, Vote, Search, Lock, Eye, CheckCircle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Button from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
+  const { user, token, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading || !token || !user) return;
+    navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+  }, [loading, token, user, navigate]);
+
+  if (loading && token) {
+    return (
+      <div className="min-h-screen bg-bv-bg text-bv-ink flex items-center justify-center px-8">
+        <div className="w-full max-w-md rounded-2xl border border-bv-border bg-bv-surface p-8 text-center">
+          <div className="mx-auto h-10 w-10 rounded-xl bg-bv-accent-muted flex items-center justify-center">
+            <Vote size={18} className="text-bv-accent" />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold">Restoring your session</h1>
+          <p className="mt-2 text-sm text-bv-ink-secondary">
+            You already have a valid token saved, so Blockvote is taking you back in.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-bv-bg text-bv-ink">
       <Navbar />

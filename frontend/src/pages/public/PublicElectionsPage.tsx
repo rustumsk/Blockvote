@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Search, Calendar } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Search, Calendar, LogIn, Shield, Trophy } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Navbar from '../../components/layout/Navbar'
 import ElectionCard from '../../components/shared/ElectionCard'
@@ -54,6 +54,10 @@ const PublicElectionsPage = () => {
   const schedule = [...filtered].sort(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   )
+  const publishedCount = useMemo(
+    () => elections.filter((election) => election.resultsPublished).length,
+    [elections]
+  )
 
   return (
     <div className="min-h-screen bg-bv-bg text-bv-ink">
@@ -62,7 +66,43 @@ const PublicElectionsPage = () => {
       <main className="pt-24 pb-16 px-8 max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-bv-ink">Elections</h1>
-          <p className="text-bv-ink-secondary mt-1">View all elections and the voting schedule. No account required.</p>
+          <p className="text-bv-ink-secondary mt-1">View election schedules, candidate information, and public statuses without an account.</p>
+        </div>
+
+        <div className="mb-6 rounded-[24px] border border-bv-border bg-bv-surface px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bv-accent-muted text-bv-accent">
+                <Shield size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-bv-ink">Guest view</h2>
+                <p className="mt-1 text-sm leading-6 text-bv-ink-secondary">
+                  Guests can browse schedules, statuses, candidates, published results, and public transaction proofs. Login is required only for voting and account actions.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-shrink-0">
+              <Link to="/published-elections">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl border border-bv-border px-4 py-2.5 text-sm font-medium text-bv-ink-secondary transition-colors hover:border-bv-accent hover:text-bv-accent"
+                >
+                  <Trophy size={15} />
+                  Published Results ({publishedCount})
+                </button>
+              </Link>
+              <Link to="/login">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl border border-bv-border px-4 py-2.5 text-sm font-medium text-bv-ink-secondary transition-colors hover:border-bv-accent hover:text-bv-accent"
+                >
+                  <LogIn size={15} />
+                  Log in to vote
+                </button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="relative w-full max-w-sm mb-6">
@@ -153,7 +193,7 @@ const PublicElectionsPage = () => {
                     endDate={election.endDate}
                     candidateCount={election.candidateCount}
                     hasVoted={false}
-                    role="voter"
+                    role="public"
                   />
                 ))}
               </div>
@@ -162,10 +202,10 @@ const PublicElectionsPage = () => {
         )}
 
         <p className="mt-8 text-bv-ink-muted text-sm">
-          <Link to="/register" className="text-bv-accent hover:underline">Register</Link>
+          <Link to="/verify" className="text-bv-accent hover:underline">Verify a public transaction</Link>
           {' or '}
           <Link to="/login" className="text-bv-accent hover:underline">log in</Link>
-          {' to cast your vote in active elections.'}
+          {' to participate in active elections.'}
         </p>
       </main>
     </div>

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Eye, EyeOff, Mail, Lock, User, Phone, Shield, Vote, Search } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
+import { notifyError, notifySuccess } from '../../lib/toast';
+import { clearPendingWallet, getPendingWallet, requestWalletAddress, setPendingWallet } from '../../utils/wallet';
 
 const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -14,20 +16,44 @@ const RegisterPage = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(() => getPendingWallet());
+  const [connectingWallet, setConnectingWallet] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    setWalletAddress(getPendingWallet());
+  }, []);
+
+  const shortWallet = useMemo(() => {
+    if (!walletAddress) return '';
+    return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+  }, [walletAddress]);
+
+  const handleConnectWallet = async () => {
+    setConnectingWallet(true);
+    try {
+      const address = await requestWalletAddress();
+      setPendingWallet(address);
+      setWalletAddress(address);
+      notifySuccess('Wallet connected. You can continue registration now.');
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'Failed to connect wallet');
+    } finally {
+      setConnectingWallet(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!name.trim()) { setError('Name is required'); return; }
-    if (!email.trim()) { setError('Email is required'); return; }
-    if (!password) { setError('Password is required'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
-    if (!agreed) { setError('Please agree to the Terms & Conditions'); return; }
+    if (!name.trim()) { notifyError('Name is required'); return; }
+    if (!email.trim()) { notifyError('Email is required'); return; }
+    if (!password) { notifyError('Password is required'); return; }
+    if (password !== confirmPassword) { notifyError('Passwords do not match'); return; }
+    if (!walletAddress) { notifyError('Connect your wallet before registering'); return; }
+    if (!agreed) { notifyError('Please agree to the Terms & Conditions'); return; }
     setSubmitting(true);
     try {
       await register({
@@ -35,11 +61,14 @@ const RegisterPage = () => {
         email: email.trim(),
         password,
         phone: phone.trim() || undefined,
+        walletAddress,
       });
+      clearPendingWallet();
       setSuccess(true);
+      notifySuccess('Registration successful. Check your email to verify your account.');
       setTimeout(() => navigate('/login', { replace: true }), 2500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      notifyError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setSubmitting(false);
     }
@@ -57,6 +86,44 @@ const RegisterPage = () => {
             We sent a verification link to <strong className="text-bv-ink">{email}</strong>. Click it to verify your account, then log in.
           </p>
           <p className="text-bv-ink-muted text-xs mt-4">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!walletAddress) {
+    return (
+      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
+        <div className="w-full max-w-lg rounded-3xl border border-bv-border bg-bv-surface p-8 text-center shadow-2xl shadow-black/30">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-bv-accent/20 bg-bv-accent-muted">
+            <Box size={30} className="text-bv-accent" />
+          </div>
+          <h1 className="text-2xl font-bold text-bv-ink">Connect your wallet first</h1>
+          <p className="mt-3 text-sm leading-relaxed text-bv-ink-secondary">
+            Blockvote now requires a wallet before account creation so your voter profile and MetaMask identity stay aligned from the start.
+          </p>
+          <div className="mt-6 rounded-2xl border border-bv-border bg-bv-bg px-4 py-4 text-left">
+            <p className="text-sm font-semibold text-bv-ink">Why this is required</p>
+            <p className="mt-2 text-xs leading-relaxed text-bv-ink-secondary">
+              Your wallet is used for approval checks, vote casting, and wallet sign-in. Connect it now, then finish the registration form.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="!mt-6"
+            onClick={handleConnectWallet}
+            disabled={connectingWallet}
+          >
+            {connectingWallet ? 'Connecting wallet...' : 'Connect Wallet To Register'}
+          </Button>
+          <p className="mt-5 text-center">
+            <Link to="/login" className="text-bv-accent text-sm hover:underline">
+              Already registered? Sign in
+            </Link>
+          </p>
         </div>
       </div>
     );
@@ -125,12 +192,22 @@ const RegisterPage = () => {
             </Link>
           </p>
 
+          <div className="mb-5 rounded-2xl border border-bv-accent/20 bg-bv-accent-muted/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bv-accent">Linked wallet</p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="font-mono text-sm text-bv-ink">{shortWallet}</span>
+              <button
+                type="button"
+                className="text-xs font-medium text-bv-accent hover:underline"
+                onClick={handleConnectWallet}
+                disabled={connectingWallet}
+              >
+                {connectingWallet ? 'Updating...' : 'Change wallet'}
+              </button>
+            </div>
+          </div>
+
           <form className="space-y-3" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/15 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <Input type="text" placeholder="Full name" icon={<User size={15} />} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
             <Input type="email" placeholder="Email address" icon={<Mail size={15} />} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             <Input type="tel" placeholder="Phone number (optional)" icon={<Phone size={15} />} value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />

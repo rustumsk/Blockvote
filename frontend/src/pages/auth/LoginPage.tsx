@@ -1,38 +1,80 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Eye, EyeOff, Mail, Lock, Shield, Vote, Search } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import ConnectWalletButton from '../../components/wallet/ConnectWalletButton';
 import { useAuth } from '../../context/AuthContext';
+import { authApi } from '../../api/client';
+import { notifyError, notifySuccess } from '../../lib/toast';
+import { requestWalletAddress, signWalletMessage } from '../../utils/wallet';
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const [walletSubmitting, setWalletSubmitting] = useState(false);
+  const { login, loginWithWallet, user, token, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading || !token || !user) return;
+    navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+  }, [loading, token, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     if (!email.trim() || !password) {
-      setError('Email and password are required');
+      notifyError('Email and password are required');
       return;
     }
     setSubmitting(true);
     try {
       const user = await login(email.trim(), password);
+      notifySuccess('Signed in successfully.');
       if (user.role === 'ADMIN') navigate('/admin/dashboard', { replace: true });
       else navigate('/voter/dashboard', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      notifyError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleWalletLogin = async () => {
+    setWalletSubmitting(true);
+    try {
+      const walletAddress = await requestWalletAddress();
+      const { message } = await authApi.requestWalletLoginNonce(walletAddress);
+      const signed = await signWalletMessage(message);
+      if (signed.address.toLowerCase() !== walletAddress.toLowerCase()) {
+        throw new Error('Please sign in with the same wallet account you connected.');
+      }
+      const user = await loginWithWallet(walletAddress, signed.signature);
+      notifySuccess('Signed in with MetaMask.');
+      navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+    } catch (err) {
+      notifyError(err instanceof Error ? err.message : 'Wallet login failed');
+    } finally {
+      setWalletSubmitting(false);
+    }
+  };
+
+  if (loading && token) {
+    return (
+      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border border-bv-border bg-bv-surface p-8 text-center">
+          <div className="mx-auto mb-4 h-10 w-10 rounded-xl bg-bv-accent-muted flex items-center justify-center">
+            <Box size={20} className="text-bv-accent" />
+          </div>
+          <h1 className="text-xl font-bold text-bv-ink">Checking your session</h1>
+          <p className="mt-2 text-sm text-bv-ink-secondary">
+            You already have a saved token, so Blockvote is authenticating you now.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
@@ -98,11 +140,6 @@ const LoginPage = () => {
           </p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/15 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <Input
               type="email"
               placeholder="Email address"
@@ -143,7 +180,20 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <ConnectWalletButton variant="outline" fullWidth size="lg" showIcon={true} />
+          <Button
+            type="button"
+            variant="outline"
+            fullWidth
+            size="lg"
+            onClick={handleWalletLogin}
+            disabled={walletSubmitting}
+          >
+            {walletSubmitting ? 'Waiting for MetaMask...' : 'Sign In With MetaMask'}
+          </Button>
+
+          <p className="mt-3 text-center text-xs text-bv-ink-muted">
+            Use the wallet already linked to your Blockvote account.
+          </p>
 
           <p className="text-center mt-6">
             <Link to="/" className="text-bv-ink-muted text-xs hover:text-bv-ink-secondary transition-colors">

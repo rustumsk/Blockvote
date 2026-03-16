@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { authApi, type User } from '../api/client'
 import { clearPendingWallet, getPendingWallet } from '../utils/wallet'
+import { notifyError, notifyInfo } from '../lib/toast'
 
 const TOKEN_KEY = 'blockvote_token'
 const USER_KEY = 'blockvote_user'
@@ -10,7 +11,9 @@ type AuthContextValue = {
   token: string | null
   loading: boolean
   login: (email: string, password: string) => Promise<User>
-  register: (data: { name: string; email: string; password: string; phone?: string }) => Promise<void>
+  loginWithWallet: (walletAddress: string, signature: string) => Promise<User>
+  register: (data: { name: string; email: string; password: string; phone?: string; walletAddress: string }) => Promise<void>
+  refreshUser: () => Promise<User | null>
   logout: () => void
   setUser: (user: User | null) => void
 }
@@ -42,12 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(USER_KEY)
   }, [])
 
-  const login = useCallback(async (email: string, password: string): Promise<User> => {
-    const { token: t, user: u } = await authApi.login({ email, password })
+  const persistSession = useCallback((t: string, u: User) => {
     setToken(t)
     setUser(u)
     localStorage.setItem(TOKEN_KEY, t)
     localStorage.setItem(USER_KEY, JSON.stringify(u))
+  }, [setUser])
+
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
+    const { token: t, user: u } = await authApi.login({ email, password })
+    persistSession(t, u)
     let finalUser = u
     const pendingWallet = getPendingWallet()
     if (pendingWallet) {
@@ -56,40 +63,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(updated)
         localStorage.setItem(USER_KEY, JSON.stringify(updated))
         finalUser = updated
-      } catch (_) {
-        // ignore if backend rejects (e.g. duplicate wallet)
+        if (updated.status === 'PENDING' && u.status === 'APPROVED') {
+          notifyInfo('Wallet linked. Admin approval is required again before you can vote.')
+        } else {
+          notifyInfo('Wallet linked to your account.')
+        }
+      } catch (error) {
+        notifyError(error instanceof Error ? error.message : 'Failed to link wallet after login')
       }
       clearPendingWallet()
     }
     return finalUser
-  }, [])
+  }, [persistSession, setUser])
 
-  const register = useCallback(async (data: { name: string; email: string; password: string; phone?: string }) => {
+  const loginWithWallet = useCallback(async (walletAddress: string, signature: string): Promise<User> => {
+    const { token: t, user: u } = await authApi.loginWithWallet({ walletAddress, signature })
+    persistSession(t, u)
+    return u
+  }, [persistSession])
+
+  const register = useCallback(async (data: { name: string; email: string; password: string; phone?: string; walletAddress: string }) => {
     await authApi.register(data)
   }, [])
+
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    if (!token) return null
+    try {
+      const u = await authApi.me()
+      setUser(u)
+      return u
+    } catch {
+      logout()
+      return null
+    }
+  }, [token, setUser, logout])
 
   useEffect(() => {
     if (!token) {
       setLoading(false)
       return
     }
-    authApi
-      .me()
-      .then((u) => {
-        setUser(u)
-      })
-      .catch(() => {
-        logout()
-      })
-      .finally(() => setLoading(false))
-  }, [token, logout])
+    refreshUser().finally(() => setLoading(false))
+  }, [token, refreshUser])
+
+  useEffect(() => {
+    if (!token) return
+
+    const refreshOnFocus = () => {
+      void refreshUser()
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshUser()
+    }, 15000)
+
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
+    }
+  }, [token, refreshUser])
 
   const value: AuthContextValue = {
     user,
     token,
     loading,
     login,
+    loginWithWallet,
     register,
+    refreshUser,
     logout,
     setUser,
   }

@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Users, BarChart2, Plus } from 'lucide-react';
+import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import { electionsApi, candidatesApi, resultsApi, type ElectionDetail, type Candidate } from '../../api/client';
+import ResultsChart from '../../components/shared/ResultsChart';
+import { getCandidatePhotoSrc } from '../../api/client';
+import { electionsApi, candidatesApi, resultsApi, type ElectionDetail, type Candidate, type ElectionResults } from '../../api/client';
+import { subscribeToElectionResults } from '../../lib/resultsSocket';
+import { notifyError, notifySuccess } from '../../lib/toast';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -31,15 +35,15 @@ const ElectionDetailPage = () => {
   const [showAddCandidate, setShowAddCandidate] = useState(false);
   const [addName, setAddName] = useState('');
   const [addDescription, setAddDescription] = useState('');
+  const [addCredentials, setAddCredentials] = useState('');
+  const [addPhoto, setAddPhoto] = useState<File | null>(null);
+  const [addPhotoPreview, setAddPhotoPreview] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [results, setResults] = useState<{
-    candidates: { contractCandidateId: number; name: string; voteCount: number }[];
-    winner: { contractCandidateId: number; name: string; voteCount: number } | null;
-    totalVotes: number;
-  } | null>(null);
+  const [results, setResults] = useState<ElectionResults | null>(null);
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [publishingResults, setPublishingResults] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -56,7 +60,6 @@ const ElectionDetailPage = () => {
     if (!id || !election) return;
 
     let cancelled = false;
-    let interval: number | undefined;
 
     const fetchResults = async () => {
       try {
@@ -71,17 +74,18 @@ const ElectionDetailPage = () => {
       }
     };
 
-    // Always load once
     fetchResults();
-
-    // Poll while ACTIVE
-    if (election.status === 'ACTIVE') {
-      interval = window.setInterval(fetchResults, 5000);
-    }
+    const unsubscribe = subscribeToElectionResults(id, (data) => {
+      if (!cancelled) {
+        setResults(data);
+        setResultsError(null);
+        setResultsLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;
-      if (interval) window.clearInterval(interval);
+      unsubscribe();
     };
   }, [id, election]);
 
@@ -94,6 +98,8 @@ const ElectionDetailPage = () => {
       const created = await candidatesApi.create(id, {
         name: addName.trim(),
         description: addDescription.trim() || undefined,
+        credentials: addCredentials.trim() || undefined,
+        photo: addPhoto,
       });
       setElection((prev) =>
         prev ? { ...prev, candidates: [...prev.candidates, created] } : null
@@ -101,10 +107,61 @@ const ElectionDetailPage = () => {
       setShowAddCandidate(false);
       setAddName('');
       setAddDescription('');
+      setAddCredentials('');
+      setAddPhoto(null);
+      if (addPhotoPreview) {
+        URL.revokeObjectURL(addPhotoPreview);
+        setAddPhotoPreview(null);
+      }
     } catch (err) {
       setAddError((err as Error).message);
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handlePhotoChange = (file: File | null) => {
+    if (addPhotoPreview) {
+      URL.revokeObjectURL(addPhotoPreview);
+    }
+
+    setAddPhoto(file);
+    setAddPhotoPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const closeAddCandidateModal = () => {
+    if (addPhotoPreview) {
+      URL.revokeObjectURL(addPhotoPreview);
+    }
+    setShowAddCandidate(false);
+    setAddError(null);
+    setAddName('');
+    setAddDescription('');
+    setAddCredentials('');
+    setAddPhoto(null);
+    setAddPhotoPreview(null);
+  };
+
+  const handlePublishResults = async () => {
+    if (!id) return;
+    setPublishingResults(true);
+    try {
+      const data = await resultsApi.publishElectionResults(id);
+      setResults(data.results);
+      setElection((prev) =>
+        prev
+          ? {
+              ...prev,
+              resultsPublished: true,
+              resultsPublishedAt: data.results.publishedAt,
+            }
+          : prev
+      );
+      notifySuccess('Official election results published.');
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'Failed to publish results');
+    } finally {
+      setPublishingResults(false);
     }
   };
 
@@ -145,7 +202,13 @@ const ElectionDetailPage = () => {
   }
 
   const isUpcoming = election.status === 'UPCOMING';
+  const isClosed = election.status === 'CLOSED';
   const totalVotes = results?.totalVotes ?? 0;
+  const turnout = results?.statistics.turnoutPercentage ?? 0;
+  const approvedVoters = results?.statistics.approvedVoterCount ?? 0;
+  const isPublished = results?.published ?? election.resultsPublished ?? false;
+  const publishedAt = results?.publishedAt ?? election.resultsPublishedAt ?? null;
+  const winnerName = results?.winner?.name ?? 'No winner yet';
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
@@ -173,11 +236,12 @@ const ElectionDetailPage = () => {
           <span>End: {formatDate(election.endDate)}</span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-4 mb-8">
           {[
             { icon: Users, label: 'Candidates', value: String(election.candidates?.length ?? 0) },
             { icon: BarChart2, label: 'Total Votes Cast', value: String(totalVotes) },
-            { icon: Users, label: 'Status', value: election.status },
+            { icon: Users, label: 'Approved Voters', value: String(approvedVoters) },
+            { icon: Trophy, label: 'Turnout', value: `${turnout}%` },
           ].map((card) => (
             <div key={card.label} className="bg-bv-surface border border-bv-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -206,18 +270,43 @@ const ElectionDetailPage = () => {
               {isUpcoming && 'Click "Add candidate" to add candidates before the election starts.'}
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {election.candidates.map((c: Candidate, idx: number) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between py-2 border-b border-bv-border last:border-0"
+                  className="relative overflow-hidden rounded-2xl border border-bv-border bg-bv-bg/70 p-4 transition-colors hover:border-bv-accent/25"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-bv-ink-muted text-xs w-4">{idx + 1}.</span>
-                    <span className="text-bv-ink text-sm font-medium">{c.name}</span>
-                    {c.description && (
-                      <span className="text-bv-ink-secondary text-xs">— {c.description}</span>
-                    )}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bv-accent/40 to-transparent" />
+                  <div className="flex items-start gap-4">
+                    <div className="h-20 w-20 overflow-hidden rounded-2xl border border-bv-border bg-bv-surface-hover flex items-center justify-center flex-shrink-0">
+                      {c.photoUrl ? (
+                        <img
+                          src={getCandidatePhotoSrc(c) ?? undefined}
+                          alt={c.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Users size={24} className="text-bv-ink-muted" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-bv-accent-muted text-[11px] font-semibold text-bv-accent">
+                          {idx + 1}
+                        </span>
+                        <span className="text-bv-ink text-sm font-semibold">{c.name}</span>
+                      </div>
+                      {c.credentials && (
+                        <p className="mt-1 text-bv-accent text-xs font-medium uppercase tracking-[0.18em]">
+                          {c.credentials}
+                        </p>
+                      )}
+                      {c.description && (
+                        <p className="mt-2 text-bv-ink-secondary text-sm leading-relaxed">
+                          {c.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -228,55 +317,66 @@ const ElectionDetailPage = () => {
         <div className="flex gap-3">
           <Button variant="outline">Edit Election</Button>
           <Button variant="danger">Pause Election</Button>
+          {isClosed && !isPublished && (
+            <Button variant="primary" onClick={handlePublishResults} disabled={publishingResults}>
+              {publishingResults ? 'Publishing...' : 'Publish Official Results'}
+            </Button>
+          )}
         </div>
 
         {/* Live Results */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold text-bv-ink mb-3">Live Results</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-bv-ink">Live Results</h2>
+            <span className="inline-flex items-center gap-2 rounded-full border border-bv-accent/20 bg-bv-accent/5 px-3 py-1 text-xs font-medium text-bv-accent">
+              <Radio size={12} />
+              Live tally stays visible
+            </span>
+          </div>
           <div className="bg-bv-surface border border-bv-border rounded-xl p-6">
-            {resultsLoading && !results && (
-              <p className="text-bv-ink-muted text-sm">Loading results from the blockchain...</p>
-            )}
-            {resultsError && (
-              <p className="text-red-400 text-sm">{resultsError}</p>
-            )}
-            {!resultsLoading && !resultsError && results && results.candidates.length === 0 && (
-              <p className="text-bv-ink-muted text-sm">
-                No votes have been recorded for this election yet.
-              </p>
-            )}
-            {!resultsLoading && results && results.candidates.length > 0 && (
-              <div className="space-y-4">
-                {results.candidates.map((c) => {
-                  const percent =
-                    results.totalVotes > 0
-                      ? Math.round((c.voteCount / results.totalVotes) * 100)
-                      : 0;
-                  return (
-                    <div key={c.contractCandidateId}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-bv-ink text-sm font-medium">{c.name}</span>
-                        </div>
-                          <span className="text-bv-ink-secondary text-xs">
-                            {c.voteCount} votes ({percent}%)
-                          </span>
-                      </div>
-                      <div className="h-2 bg-bv-bg rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-bv-accent transition-all"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                {results.winner && (
-                  <p className="text-bv-accent text-sm mt-3">
-                    Current winner: <strong>{results.winner.name}</strong> ({results.winner.voteCount}{' '}
-                    votes)
+            <ResultsChart
+              candidates={results?.candidates ?? []}
+              winner={results?.winner ?? null}
+              totalVotes={results?.totalVotes ?? 0}
+              loading={resultsLoading}
+              error={resultsError}
+              emptyMessage="No votes have been recorded for this election yet."
+            />
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="text-lg font-bold text-bv-ink mb-3">Official Published Result</h2>
+          <div className="rounded-xl border border-bv-border bg-bv-surface p-6">
+            {isPublished ? (
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bv-accent">
+                    Official winner
                   </p>
-                )}
+                  <p className="mt-3 text-2xl font-bold text-bv-ink">{winnerName}</p>
+                  <p className="mt-2 text-sm text-bv-ink-secondary">
+                    Published {publishedAt ? new Date(publishedAt).toLocaleString() : 'just now'}.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-bv-border bg-bv-bg px-5 py-4">
+                  <p className="text-xs uppercase tracking-wide text-bv-ink-muted">Recorded votes</p>
+                  <p className="mt-2 text-xl font-semibold text-bv-ink">{totalVotes}</p>
+                </div>
+              </div>
+            ) : isClosed ? (
+              <div>
+                <p className="text-bv-ink text-sm font-medium">Results are ready for publication.</p>
+                <p className="mt-2 text-sm text-bv-ink-secondary">
+                  Voters can still monitor the live tally, but the official published result will only appear after you confirm it here.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-bv-ink text-sm font-medium">Official results are not available yet.</p>
+                <p className="mt-2 text-sm text-bv-ink-secondary">
+                  This election must close before an admin can publish the official result.
+                </p>
               </div>
             )}
           </div>
@@ -284,7 +384,7 @@ const ElectionDetailPage = () => {
       </main>
 
       {showAddCandidate && (
-        <Modal title="Add candidate" onClose={() => setShowAddCandidate(false)}>
+        <Modal title="Add candidate" onClose={closeAddCandidateModal}>
           <form className="space-y-5" onSubmit={handleAddCandidate}>
             <Input
               label="Name"
@@ -305,6 +405,52 @@ const ElectionDetailPage = () => {
                 onChange={(e) => setAddDescription(e.target.value)}
               />
             </div>
+            <div>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
+                Credentials
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Debate champion, blockchain researcher, council secretary"
+                className="bg-bv-surface border border-bv-border rounded-lg px-4 py-3 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full resize-none text-sm"
+                value={addCredentials}
+                onChange={(e) => setAddCredentials(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
+                Candidate Photo
+              </label>
+              <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-bv-border bg-bv-surface px-4 py-6 text-center hover:border-bv-accent/50 transition-colors">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+                />
+                <div className="space-y-2">
+                  {addPhotoPreview ? (
+                    <img
+                      src={addPhotoPreview}
+                      alt="Candidate preview"
+                      className="mx-auto h-28 w-28 rounded-2xl object-cover border border-bv-border"
+                    />
+                  ) : (
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-bv-bg border border-bv-border">
+                      <ImagePlus size={22} className="text-bv-accent" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-bv-ink text-sm font-medium">
+                      {addPhoto ? addPhoto.name : 'Upload a candidate headshot'}
+                    </p>
+                    <p className="text-bv-ink-muted text-xs mt-1">
+                      JPG, PNG, WEBP, or GIF up to 5MB
+                    </p>
+                  </div>
+                </div>
+              </label>
+            </div>
             {addError && <p className="text-red-400 text-sm">{addError}</p>}
             <div className="flex gap-3 pt-2">
               <Button type="submit" variant="primary" fullWidth disabled={addLoading}>
@@ -314,7 +460,7 @@ const ElectionDetailPage = () => {
                 type="button"
                 variant="outline"
                 fullWidth
-                onClick={() => setShowAddCandidate(false)}
+                onClick={closeAddCandidateModal}
                 disabled={addLoading}
               >
                 Cancel

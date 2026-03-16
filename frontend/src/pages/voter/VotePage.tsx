@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, Users, AlertTriangle, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Clock, Users, AlertTriangle, BarChart2, Radio, Trophy } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BrowserProvider, Contract } from 'ethers';
 import Sidebar from '../../components/layout/Sidebar';
 import CandidateCard from '../../components/shared/CandidateCard';
+import ResultsChart from '../../components/shared/ResultsChart';
 import Button from '../../components/ui/Button';
-import { electionsApi, type ElectionDetail, votesApi, resultsApi } from '../../api/client';
+import { electionsApi, type ElectionDetail, type ElectionResults, votesApi, resultsApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { notifyError, notifyInfo, notifySuccess } from '../../lib/toast';
+import { subscribeToElectionResults } from '../../lib/resultsSocket';
 
 const MetaMaskIcon = () => (
   <svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -25,14 +28,10 @@ const VotePage = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCandidateId, setVotedCandidateId] = useState<string | null>(null);
-  const [results, setResults] = useState<{
-    candidates: { contractCandidateId: number; name: string; voteCount: number }[];
-    winner: { contractCandidateId: number; name: string; voteCount: number } | null;
-    totalVotes: number;
-  } | null>(null);
+  const [results, setResults] = useState<ElectionResults | null>(null);
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -40,13 +39,46 @@ const VotePage = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    setError(null);
+    setPageError(null);
     electionsApi
       .getById(id)
       .then(setElection)
-      .catch((e) => setError((e as Error).message))
+      .catch((e) => setPageError((e as Error).message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !election) return;
+
+    let cancelled = false;
+
+    const fetchResults = async () => {
+      try {
+        setResultsLoading(true);
+        setResultsError(null);
+        const data = await resultsApi.getElectionResults(id);
+        if (!cancelled) setResults(data);
+      } catch (e) {
+        if (!cancelled) setResultsError((e as Error).message);
+      } finally {
+        if (!cancelled) setResultsLoading(false);
+      }
+    };
+
+    fetchResults();
+    const unsubscribe = subscribeToElectionResults(id, (data) => {
+      if (!cancelled) {
+        setResults(data);
+        setResultsError(null);
+        setResultsLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [id, election]);
 
   // Check if this voter already voted in this election
   useEffect(() => {
@@ -67,38 +99,6 @@ const VotePage = () => {
     checkVoted();
   }, [id]);
 
-  // Live results from contract
-  useEffect(() => {
-    if (!id || !election) return;
-
-    let cancelled = false;
-    let interval: number | undefined;
-
-    const fetchResults = async () => {
-      try {
-        setResultsLoading(true);
-        setResultsError(null);
-        const data = await resultsApi.getElectionResults(id);
-        if (!cancelled) setResults(data);
-      } catch (e) {
-        if (!cancelled) setResultsError((e as Error).message);
-      } finally {
-        if (!cancelled) setResultsLoading(false);
-      }
-    };
-
-    fetchResults();
-
-    if (election.status === 'ACTIVE') {
-      interval = window.setInterval(fetchResults, 5000);
-    }
-
-    return () => {
-      cancelled = true;
-      if (interval) window.clearInterval(interval);
-    };
-  }, [id, election]);
-
   // Countdown timer
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -107,6 +107,21 @@ const VotePage = () => {
 
   const countdownLabel = (() => {
     if (!election) return null;
+    if (election.status === 'UPCOMING') {
+      const start = new Date(election.startDate).getTime();
+      const diff = start - now;
+      if (diff <= 0) return 'Voting opens soon';
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / (24 * 3600));
+      const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s until voting opens`;
+      if (hours > 0) return `${hours}h ${minutes}m ${seconds}s until voting opens`;
+      if (minutes > 0) return `${minutes}m ${seconds}s until voting opens`;
+      return `${seconds}s until voting opens`;
+    }
+
     const end = new Date(election.endDate).getTime();
     const diff = end - now;
     if (diff <= 0) return 'Voting window has ended';
@@ -121,55 +136,90 @@ const VotePage = () => {
     return `${seconds}s remaining`;
   })();
 
+  const isActive = election?.status === 'ACTIVE';
+  const isUpcoming = election?.status === 'UPCOMING';
+  const isPublished = results?.published ?? election?.resultsPublished ?? false;
+  const publishedAt = results?.publishedAt ?? election?.resultsPublishedAt ?? null;
+  const statusMessage = isUpcoming
+    ? 'This election is published early so you can review candidates before voting opens.'
+    : election?.status === 'CLOSED'
+      ? 'This election is already closed. You can still review candidates and results.'
+      : null;
+
   const handleCastVote = async () => {
     if (!id || !selectedId || !election) return;
+    if (election.status !== 'ACTIVE') {
+      notifyError('Voting is only available once the election becomes active.');
+      return;
+    }
     if (hasVoted) {
-      setError('You have already voted in this election.');
+      notifyError('You have already voted in this election.');
       return;
     }
     if (!user?.walletAddress) {
-      setError('You must link a wallet in your profile before voting.');
+      notifyError('You must link a wallet in your profile before voting.');
       return;
     }
     const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS as string | undefined;
     if (!contractAddress) {
-      setError('Contract address is not configured on the frontend.');
+      notifyError('Contract address is not configured on the frontend.');
       return;
     }
     const candidate = election.candidates.find((c) => c.id === selectedId);
     if (!candidate || election.contractElectionId == null || candidate.contractCandidateId == null) {
-      setError('Election or candidate is not synced to the contract.');
+      notifyError('Election or candidate is not synced to the contract.');
       return;
     }
     if (!(window as any).ethereum) {
-      setError('MetaMask (or another Web3 wallet) is required to vote.');
+      notifyError('MetaMask (or another Web3 wallet) is required to vote.');
       return;
     }
     setSubmitting(true);
-    setError(null);
     try {
       const provider = new BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
       const abi = [
         'function castVote(uint256 _electionId, uint256 _candidateId) external',
+        'function hasVoted(address _voter, uint256 _electionId) external view returns (bool)',
       ];
       const contract = new Contract(contractAddress, abi, signer);
-      const tx = await contract.castVote(election.contractElectionId, candidate.contractCandidateId);
-      const receipt = await tx.wait();
+      const signerAddress = await signer.getAddress();
+      if (signerAddress.toLowerCase() !== user.walletAddress.toLowerCase()) {
+        notifyError('Your active MetaMask account does not match the wallet linked to this account.');
+        return;
+      }
 
-      await votesApi.recordVote({ electionId: id, candidateId: selectedId, txHash: tx.hash });
+      const alreadyVotedOnChain = await contract.hasVoted(signerAddress, election.contractElectionId);
+      if (alreadyVotedOnChain) {
+        setHasVoted(true);
+        notifyError('This wallet has already voted in the selected election.');
+        return;
+      }
+
+      notifyInfo('Confirm the vote in your wallet.');
+      const tx = await contract.castVote(election.contractElectionId, candidate.contractCandidateId);
+      await tx.wait();
+      try {
+        await votesApi.recordVote({ electionId: id, candidateId: selectedId, txHash: tx.hash });
+      } catch (e) {
+        notifyError(`The vote was confirmed on-chain, but saving the receipt failed: ${(e as Error).message}`);
+      }
+
+      setHasVoted(true);
+      setVotedCandidateId(candidate.id);
+      notifySuccess('Vote cast successfully.');
 
       navigate(`/voter/receipt?tx=${encodeURIComponent(tx.hash)}`, {
         state: {
           election: election.title,
           candidate: candidate.name,
-          wallet: user.walletAddress,
+          wallet: signerAddress,
           txHash: tx.hash,
           timestamp: new Date().toISOString(),
         },
       });
     } catch (e) {
-      setError((e as Error).message);
+      notifyError((e as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -183,9 +233,9 @@ const VotePage = () => {
         {loading && (
           <p className="text-bv-ink-muted">Loading election...</p>
         )}
-        {!loading && error && (
+        {!loading && pageError && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-            {error}
+            {pageError}
           </div>
         )}
         {!loading && election && (
@@ -228,20 +278,34 @@ const VotePage = () => {
         </div>
 
         {/* Select Candidate */}
-        <section className="mb-8">
-          <h2 className="text-lg font-bold text-bv-ink mb-4">Select a Candidate</h2>
-          <div className="grid grid-cols-2 gap-4">
+        <section className="mb-8 rounded-[28px] border border-bv-border bg-bv-bg-deep px-6 py-8">
+          <div className="mx-auto mb-8 max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-bv-accent">
+              Election Candidates
+            </p>
+            <h2 className="mt-3 text-4xl font-bold text-bv-ink">
+              Vote for {election.title}
+            </h2>
+            <p className="mt-3 text-sm text-bv-ink-secondary">
+              Review each profile, open their details, then lock in your vote before the timer ends.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {election.candidates.map((candidate) => (
               <CandidateCard
                 key={candidate.id}
                 {...candidate}
+                size="compact"
                 selected={selectedId === candidate.id}
                 onSelect={setSelectedId}
+                disabled={hasVoted || !isActive}
+                profileHref={`/elections/${id}/candidates/${candidate.id}`}
+                voteLabel={isUpcoming ? 'Voting Opens Soon' : election.status === 'CLOSED' ? 'Voting Closed' : 'I Vote For This'}
               />
             ))}
           </div>
           {hasVoted && votedCandidateId && (
-            <p className="mt-3 text-bv-accent text-xs">
+            <p className="mt-5 text-center text-bv-accent text-xs">
               You already voted in this election for{' '}
               <strong>
                 {election.candidates.find((c) => c.id === votedCandidateId)?.name ??
@@ -254,6 +318,11 @@ const VotePage = () => {
 
         {/* Cast Vote */}
         <div className="bg-bv-surface border border-bv-border rounded-2xl p-6">
+          {statusMessage && (
+            <div className="mb-5 rounded-xl border border-bv-accent/20 bg-bv-accent/5 px-4 py-3 text-sm text-bv-ink-secondary">
+              {statusMessage}
+            </div>
+          )}
           <div className="flex items-start gap-4 mb-5">
             <AlertTriangle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
             <p className="text-bv-ink-secondary text-sm leading-relaxed">
@@ -265,11 +334,17 @@ const VotePage = () => {
             <Button
               variant="primary"
               size="lg"
-              disabled={!selectedId || submitting || hasVoted}
-              className={!selectedId || hasVoted ? 'opacity-40' : ''}
+              disabled={!selectedId || submitting || hasVoted || !isActive}
+              className={!selectedId || hasVoted || !isActive ? 'opacity-40' : ''}
               onClick={handleCastVote}
             >
-              {submitting ? 'Casting vote...' : 'Cast Vote'}
+              {submitting
+                ? 'Casting vote...'
+                : isUpcoming
+                  ? 'Voting Opens Soon'
+                  : election.status === 'CLOSED'
+                    ? 'Voting Closed'
+                    : 'Cast Vote'}
             </Button>
 
             <div className="flex items-center gap-2 text-bv-ink-secondary text-sm">
@@ -285,52 +360,59 @@ const VotePage = () => {
           )}
         </div>
 
-        {/* Live Results */}
         <section className="mt-8">
           <h2 className="text-lg font-bold text-bv-ink mb-3 flex items-center gap-2">
             <BarChart2 size={18} className="text-bv-accent" />
             Live Results
           </h2>
           <div className="bg-bv-surface border border-bv-border rounded-2xl p-6">
-            {resultsLoading && !results && (
-              <p className="text-bv-ink-muted text-sm">Loading live results...</p>
-            )}
-            {resultsError && (
-              <p className="text-red-400 text-sm">{resultsError}</p>
-            )}
-            {!resultsLoading && results && results.candidates.length === 0 && (
-              <p className="text-bv-ink-muted text-sm">
-                No votes have been recorded for this election yet.
-              </p>
-            )}
-            {!resultsLoading && results && results.candidates.length > 0 && (
-              <div className="space-y-4">
-                {results.candidates.map((c) => {
-                  const percent =
-                    results.totalVotes > 0
-                      ? Math.round((c.voteCount / results.totalVotes) * 100)
-                      : 0;
-                  return (
-                    <div key={c.contractCandidateId}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-bv-ink text-sm font-medium">{c.name}</span>
-                        <span className="text-bv-ink-secondary text-xs">
-                          {c.voteCount} votes ({percent}%)
-                        </span>
-                      </div>
-                      <div className="h-2 bg-bv-bg rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-bv-accent transition-all"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-bv-accent/20 bg-bv-accent/5 px-3 py-1 text-xs font-medium text-bv-accent">
+              <Radio size={12} />
+              Live tally stays visible throughout the election
+            </div>
+            <ResultsChart
+              candidates={results?.candidates ?? []}
+              winner={results?.winner ?? null}
+              totalVotes={results?.totalVotes ?? 0}
+              loading={resultsLoading}
+              error={resultsError}
+            />
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <div className="bg-bv-surface border border-bv-border rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-bv-ink flex items-center gap-2">
+              <Trophy size={18} className="text-bv-accent" />
+              Official Published Result
+            </h2>
+            {isPublished ? (
+              <>
+                <p className="mt-4 text-2xl font-bold text-bv-ink">
+                  {results?.winner?.name ?? 'No winner declared'}
+                </p>
+                <p className="mt-2 text-sm text-bv-ink-secondary">
+                  Published {publishedAt ? new Date(publishedAt).toLocaleString() : 'recently'} after the election closed.
+                </p>
+              </>
+            ) : election.status === 'CLOSED' ? (
+              <>
+                <p className="mt-4 text-sm font-medium text-bv-ink">Official result is still pending publication.</p>
+                <p className="mt-2 text-sm text-bv-ink-secondary">
+                  The election has ended, but the admin has not published the final official result yet. You can still review the live tally above.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 text-sm font-medium text-bv-ink">Official results appear after closure.</p>
+                <p className="mt-2 text-sm text-bv-ink-secondary">
+                  While voting is open, the live tally above continues updating in real time.
+                </p>
+              </>
             )}
           </div>
         </section>
+
         </>
         )}
       </main>

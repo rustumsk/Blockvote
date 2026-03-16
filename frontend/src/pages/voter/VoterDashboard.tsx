@@ -8,7 +8,6 @@ import { useAuth } from '../../context/AuthContext';
 
 const VoterDashboard = () => {
   const { user } = useAuth();
-  const [isPending, setIsPending] = useState(false);
   const [elections, setElections] = useState<ElectionListItem[]>([]);
   const [myVotes, setMyVotes] = useState<
     {
@@ -20,12 +19,10 @@ const VoterDashboard = () => {
     }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        setError(null);
         setLoading(true);
         const [allElections, votes] = await Promise.all([
           electionsApi.getList(),
@@ -33,9 +30,6 @@ const VoterDashboard = () => {
         ]);
         setElections(allElections);
         setMyVotes(votes);
-        setIsPending(user?.status === 'PENDING');
-      } catch (e) {
-        setError((e as Error).message);
       } finally {
         setLoading(false);
       }
@@ -47,6 +41,7 @@ const VoterDashboard = () => {
   const upcoming = elections.filter((e) => e.status === 'UPCOMING');
   const votedElectionIds = new Set(myVotes.map((v) => v.election.id));
   const recentActivity = myVotes.slice(0, 5);
+  const isPending = user?.status === 'PENDING';
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
