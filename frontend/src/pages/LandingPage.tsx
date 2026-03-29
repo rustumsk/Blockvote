@@ -1,10 +1,69 @@
 import { useEffect } from 'react';
-import { Shield, Vote, Search, Lock, Eye, CheckCircle, ArrowRight } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  Lock,
+  Search,
+  ShieldCheck,
+  Vote,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+
+const proofPoints = [
+  {
+    label: 'Identity and access',
+    title: 'Only verified voters enter the ballot flow.',
+    description:
+      'Registration, approval, and wallet connection create a tighter chain of custody before a vote is submitted.',
+    icon: ShieldCheck,
+  },
+  {
+    label: 'On-chain records',
+    title: 'Each vote leaves a receipt you can inspect later.',
+    description:
+      'Transactions are signed, recorded, and available for public verification without exposing ballot intent in the interface.',
+    icon: Vote,
+  },
+  {
+    label: 'Independent verification',
+    title: 'Trust is earned through visibility, not promises.',
+    description:
+      'Receipts, hashes, and published results make it easier to audit what happened after polls close.',
+    icon: Search,
+  },
+];
+
+const systemNotes = [
+  {
+    title: 'Protected by cryptographic signing',
+    description:
+      'Every action moves through a wallet-confirmed flow designed to reduce tampering risk.',
+    icon: Lock,
+  },
+  {
+    title: 'Observable from registration to result',
+    description:
+      'Admins, voters, and the public each get a cleaner view into the election lifecycle.',
+    icon: Eye,
+  },
+  {
+    title: 'Built for verifiable outcomes',
+    description:
+      'The platform keeps the final step simple: confirm the vote and inspect the published trail.',
+    icon: CheckCircle2,
+  },
+];
+
+const metrics = [
+  { value: 'Wallet-signed', label: 'vote confirmations' },
+  { value: 'Immutable', label: 'blockchain receipts' },
+  { value: 'Anytime', label: 'public verification' },
+];
 
 const LandingPage = () => {
   const { user, token, loading } = useAuth();
@@ -15,16 +74,36 @@ const LandingPage = () => {
     navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
   }, [loading, token, user, navigate]);
 
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!elements.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.2, rootMargin: '0px 0px -10% 0px' }
+    );
+
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, []);
+
   if (loading && token) {
     return (
       <div className="min-h-screen bg-bv-bg text-bv-ink flex items-center justify-center px-8">
-        <div className="w-full max-w-md rounded-2xl border border-bv-border bg-bv-surface p-8 text-center">
-          <div className="mx-auto h-10 w-10 rounded-xl bg-bv-accent-muted flex items-center justify-center">
+        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-bv-accent-muted">
             <Vote size={18} className="text-bv-accent" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold">Restoring your session</h1>
+          <h1 className="mt-4 text-2xl font-semibold">Restoring your session</h1>
           <p className="mt-2 text-sm text-bv-ink-secondary">
-            You already have a valid token saved, so Blockvote is taking you back in.
+            Your saved access is still valid, so Blockvote is taking you back in.
           </p>
         </div>
       </div>
@@ -32,175 +111,220 @@ const LandingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-bv-bg text-bv-ink">
+    <div className="landing-page min-h-screen overflow-hidden bg-bv-bg text-bv-ink">
       <Navbar />
 
-      {/* Hero */}
-      <section className="relative min-h-[90vh] flex items-center justify-center px-8 pt-16">
-        <div
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none opacity-30"
-          style={{
-            background: 'radial-gradient(circle, rgba(0,212,200,0.15) 0%, transparent 70%)',
-            filter: 'blur(80px)',
-          }}
-        />
+      <main className="relative">
+        <section className="landing-hero relative flex min-h-screen items-center px-6 pb-14 pt-28 sm:px-8 lg:px-12">
+          <div className="landing-hero__aurora" aria-hidden="true" />
+          <div className="landing-hero__grid" aria-hidden="true" />
+          <div className="landing-orb landing-orb--one" aria-hidden="true" />
+          <div className="landing-orb landing-orb--two" aria-hidden="true" />
 
-        <div className="relative text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-bv-accent-muted rounded-full px-3.5 py-1 text-bv-accent text-xs font-medium mb-8">
-            <div className="w-1.5 h-1.5 rounded-full bg-bv-accent animate-pulse" />
-            Powered by Blockchain
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold leading-[1.1] mb-5 tracking-tight">
-            Secure. Transparent.
-            <br />
-            <span className="text-bv-accent">Tamper-Proof</span> Voting.
-          </h1>
-
-          <p className="text-bv-ink-secondary text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-            A blockchain-based voting system built for honest and verifiable elections. Every vote is recorded on-chain.
-          </p>
-
-          <div className="flex items-center justify-center gap-3">
-            <Link to="/register">
-              <Button variant="primary" size="lg">
-                Get Started
-                <ArrowRight size={16} />
-              </Button>
-            </Link>
-            <a href="#how-it-works">
-              <Button variant="outline" size="lg">
-                How it works
-              </Button>
-            </a>
-          </div>
-
-          <div className="flex items-center justify-center gap-10 mt-16 pt-8 border-t border-bv-border">
-            {[
-              { value: '100%', label: 'Tamper-Proof' },
-              { value: '256-bit', label: 'Encryption' },
-              { value: 'On-Chain', label: 'Transparency' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-xl font-bold text-bv-accent">{stat.value}</div>
-                <div className="text-bv-ink-muted text-xs mt-0.5">{stat.label}</div>
+          <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] lg:items-end">
+            <div className="max-w-3xl">
+              <div className="hero-entrance hero-entrance--delay-1 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-bv-ink-secondary backdrop-blur-xl">
+                <span className="h-2 w-2 rounded-full bg-bv-accent shadow-[0_0_20px_rgba(0,212,200,0.75)]" />
+                Blockvote
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="py-24 px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-bv-accent text-xs uppercase tracking-widest font-semibold mb-2">
-              Process
-            </p>
-            <h2 className="text-3xl font-bold text-bv-ink">How It Works</h2>
-          </div>
+              <h1 className="hero-entrance hero-entrance--delay-2 mt-8 max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.05em] text-white sm:text-6xl lg:text-[6.8rem]">
+                Election trust,
+                <br />
+                recorded in motion.
+              </h1>
 
-          <div className="grid grid-cols-3 gap-8">
-            {[
-              {
-                number: '01',
-                icon: Shield,
-                title: 'Register & Approve',
-                description: 'Create an account and get verified by an admin before you can participate.',
-              },
-              {
-                number: '02',
-                icon: Vote,
-                title: 'Cast Your Vote',
-                description: 'Select your candidate and sign the transaction with MetaMask.',
-              },
-              {
-                number: '03',
-                icon: Search,
-                title: 'Verify Anytime',
-                description: 'Use your transaction hash to verify your vote on the blockchain.',
-              },
-            ].map((step) => (
-              <div key={step.number} className="text-center group">
-                <div className="w-12 h-12 rounded-2xl bg-bv-accent-muted flex items-center justify-center mx-auto mb-5 group-hover:bg-bv-accent/20 transition-colors">
-                  <step.icon size={22} className="text-bv-accent" />
+              <p className="hero-entrance hero-entrance--delay-3 mt-6 max-w-xl text-base leading-7 text-bv-ink-secondary sm:text-lg">
+                A minimal voting experience built around verified access, wallet-signed ballots,
+                and public receipts that can be checked long after voting ends.
+              </p>
+
+              <div className="hero-entrance hero-entrance--delay-4 mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                <Link to="/register">
+                  <Button variant="primary" size="lg" className="min-w-[168px]">
+                    Launch Voting
+                    <ArrowRight size={16} />
+                  </Button>
+                </Link>
+                <a href="#verification-story">
+                  <Button variant="outline" size="lg" className="border-white/12 bg-white/4">
+                    See verification flow
+                  </Button>
+                </a>
+              </div>
+            </div>
+
+            <div className="hero-entrance hero-entrance--delay-4 relative">
+              <div className="landing-terminal">
+                <div className="landing-terminal__topline">
+                  <span className="landing-terminal__pill" />
+                  <span className="landing-terminal__pill" />
+                  <span className="landing-terminal__pill" />
                 </div>
-                <div className="text-bv-ink-muted text-[11px] font-mono mb-2">{step.number}</div>
-                <h3 className="text-bv-ink font-semibold text-base mb-2">{step.title}</h3>
-                <p className="text-bv-ink-secondary text-[13px] leading-relaxed">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Features */}
-      <section className="py-24 px-8 border-t border-bv-border">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-bv-accent text-xs uppercase tracking-widest font-semibold mb-2">
-              Features
-            </p>
-            <h2 className="text-3xl font-bold text-bv-ink">Why Blockvote?</h2>
-          </div>
-
-          <div className="grid grid-cols-3 gap-5">
-            {[
-              {
-                icon: Lock,
-                title: 'Secure',
-                description: 'Cryptographic security with decentralized validation on Ethereum.',
-              },
-              {
-                icon: Eye,
-                title: 'Transparent',
-                description: 'Every vote publicly recorded on an immutable ledger.',
-              },
-              {
-                icon: CheckCircle,
-                title: 'Verifiable',
-                description: 'Track your vote anytime using your transaction receipt.',
-              },
-            ].map((feature) => (
-              <div
-                key={feature.title}
-                className="bg-bv-surface border border-bv-border rounded-2xl p-7 hover:border-bv-accent/20 transition-all duration-200 text-center group"
-              >
-                <div className="w-11 h-11 rounded-xl bg-bv-accent-muted flex items-center justify-center mx-auto mb-4 group-hover:bg-bv-accent/20 transition-colors">
-                  <feature.icon size={22} className="text-bv-accent" />
+                <div className="landing-terminal__section">
+                  <p className="landing-terminal__eyebrow">Election record</p>
+                  <div className="landing-terminal__row">
+                    <span>Status</span>
+                    <strong>Verified</strong>
+                  </div>
+                  <div className="landing-terminal__row">
+                    <span>Receipt</span>
+                    <strong>0x71...a94e</strong>
+                  </div>
+                  <div className="landing-terminal__row">
+                    <span>Network</span>
+                    <strong>Ethereum</strong>
+                  </div>
                 </div>
-                <h3 className="text-bv-ink font-semibold text-base mb-2">{feature.title}</h3>
-                <p className="text-bv-ink-secondary text-[13px] leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA */}
-      <section className="py-20 px-8 border-t border-bv-border">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-bv-ink mb-3">
-            Ready for a fairer election?
-          </h2>
-          <p className="text-bv-ink-secondary text-base mb-8">
-            Join voters using Blockvote for transparent, secure elections.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Link to="/register">
-              <Button variant="primary" size="lg">
-                Register Now
-                <ArrowRight size={16} />
-              </Button>
-            </Link>
-            <Link to="/elections">
-              <Button variant="outline" size="lg">
-                View Elections
-              </Button>
-            </Link>
+                <div className="landing-signal">
+                  <div className="landing-signal__line" />
+                  <div className="landing-signal__pulse" />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {metrics.map((metric) => (
+                    <div key={metric.label} className="landing-metric">
+                      <div className="text-sm uppercase tracking-[0.24em] text-bv-ink-muted">
+                        {metric.label}
+                      </div>
+                      <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+                        {metric.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section className="relative px-6 py-24 sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-6xl">
+            <div
+              data-reveal
+              className="reveal-element grid gap-12 border-y border-white/8 py-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start"
+            >
+              <div className="max-w-sm">
+                <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
+                  Trust Surface
+                </p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+                  One calm interface, three proof layers.
+                </h2>
+              </div>
+
+              <div className="grid gap-10 md:grid-cols-3 md:gap-6">
+                {proofPoints.map((point, index) => (
+                  <article
+                    key={point.title}
+                    className="reveal-element"
+                    data-reveal
+                    style={{ transitionDelay: `${index * 120}ms` }}
+                  >
+                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-bv-accent">
+                      <point.icon size={22} />
+                    </div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-bv-ink-muted">
+                      {point.label}
+                    </p>
+                    <h3 className="mt-3 text-xl font-medium tracking-[-0.03em] text-white">
+                      {point.title}
+                    </h3>
+                    <p className="mt-3 max-w-sm text-sm leading-7 text-bv-ink-secondary">
+                      {point.description}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="verification-story"
+          className="relative px-6 py-8 sm:px-8 lg:px-12 lg:py-16"
+        >
+          <div className="mx-auto grid max-w-6xl gap-16 lg:grid-cols-[minmax(280px,0.75fr)_minmax(0,1fr)]">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <div data-reveal className="reveal-element max-w-md">
+                <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
+                  Verification Story
+                </p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+                  The page gets deeper as you scroll, just like the audit trail.
+                </h2>
+                <p className="mt-5 text-base leading-7 text-bv-ink-secondary">
+                  Instead of filling the screen with cards, the layout moves from promise to
+                  evidence: verified entry, recorded action, inspectable outcome.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {systemNotes.map((note, index) => (
+                <article
+                  key={note.title}
+                  data-reveal
+                  className="reveal-element landing-story-panel"
+                  style={{ transitionDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex items-start gap-5">
+                    <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-bv-accent">
+                      <note.icon size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-medium tracking-[-0.03em] text-white">
+                        {note.title}
+                      </h3>
+                      <p className="mt-3 max-w-xl text-sm leading-7 text-bv-ink-secondary">
+                        {note.description}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="relative px-6 pb-24 pt-20 sm:px-8 lg:px-12">
+          <div
+            data-reveal
+            className="reveal-element landing-cta mx-auto max-w-6xl rounded-[2rem] border border-white/10 px-8 py-12 sm:px-12 sm:py-16"
+          >
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
+              Start Clean
+            </p>
+            <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+                  Build a voting flow people can inspect, not just trust.
+                </h2>
+                <p className="mt-4 text-base leading-7 text-bv-ink-secondary">
+                  Register voters, run elections, and keep the final experience minimal enough to
+                  feel serious.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link to="/register">
+                  <Button variant="primary" size="lg" className="min-w-[168px]">
+                    Register now
+                    <ArrowRight size={16} />
+                  </Button>
+                </Link>
+                <Link to="/elections">
+                  <Button variant="outline" size="lg" className="border-white/12 bg-white/4">
+                    Browse elections
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
