@@ -58,6 +58,8 @@ export const usersController = {
       const status =
         message === 'User not found'
           ? 404
+          : message === 'Only voter accounts can be approved'
+            ? 400
           : message === 'Voter must link a wallet before approval'
             ? 400
             : message === 'Voting contract is not configured'
@@ -79,6 +81,8 @@ export const usersController = {
       const status =
         message === 'User not found'
           ? 404
+          : message === 'Only voter accounts can be rejected'
+            ? 400
           : message === 'Voting contract is not configured'
             ? 503
             : 500
@@ -98,6 +102,8 @@ export const usersController = {
       const status =
         message === 'User not found'
           ? 404
+          : message === 'Only voter accounts can be revoked'
+            ? 400
           : message === 'Voting contract is not configured'
             ? 503
             : 500

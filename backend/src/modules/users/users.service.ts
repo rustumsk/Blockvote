@@ -14,6 +14,15 @@ const userListSelect = {
   updatedAt: true,
 }
 
+type UserListWhere = {
+  role?: 'ADMIN' | 'VOTER'
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  OR?: Array<{
+    name?: { contains: string; mode: 'insensitive' }
+    email?: { contains: string; mode: 'insensitive' }
+  }>
+}
+
 async function isWalletApprovedOnChain(walletAddress: string) {
   const contract = getContract()
   if (!contract) throw new Error('Voting contract is not configured')
@@ -39,7 +48,7 @@ export const usersService = {
     const limit = Math.min(100, Math.max(1, query.limit ?? 50))
     const skip = (page - 1) * limit
 
-    const where: { status?: 'PENDING' | 'APPROVED' | 'REJECTED'; OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; email?: { contains: string; mode: 'insensitive' } }> } = {}
+    const where: UserListWhere = { role: 'VOTER' }
     if (query.status && ['PENDING', 'APPROVED', 'REJECTED'].includes(query.status)) {
       where.status = query.status as 'PENDING' | 'APPROVED' | 'REJECTED'
     }
@@ -87,6 +96,7 @@ export const usersService = {
   async approveUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+    if (user.role !== 'VOTER') throw new Error('Only voter accounts can be approved')
     if (!user.walletAddress) throw new Error('Voter must link a wallet before approval')
 
     const contract = getContract()
@@ -108,6 +118,7 @@ export const usersService = {
   async rejectUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+    if (user.role !== 'VOTER') throw new Error('Only voter accounts can be rejected')
 
     if (user.status === 'APPROVED' && user.walletAddress) {
       const contract = getContract()
@@ -130,6 +141,7 @@ export const usersService = {
   async revokeUser(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
+    if (user.role !== 'VOTER') throw new Error('Only voter accounts can be revoked')
 
     if (user.walletAddress) {
       const contract = getContract()
