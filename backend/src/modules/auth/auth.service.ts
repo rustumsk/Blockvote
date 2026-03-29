@@ -40,6 +40,13 @@ function buildWalletLoginMessage(walletAddress: string, nonce: string) {
   ].join('\n')
 }
 
+function maskEmail(email: string) {
+  const [localPart, domain] = email.split('@')
+  if (!localPart || !domain) return email
+  if (localPart.length <= 2) return `${localPart[0] ?? '*'}*@${domain}`
+  return `${localPart.slice(0, 2)}***@${domain}`
+}
+
 async function isWalletApprovedOnChain(walletAddress: string) {
   const contract = getContract()
   if (!contract) throw new Error('Voting contract is not configured')
@@ -153,6 +160,34 @@ export const authService = {
     return {
       walletAddress: normalizedWalletAddress,
       message: buildWalletLoginMessage(normalizedWalletAddress, nonce),
+    }
+  },
+
+  async getWalletRegistrationStatus(walletAddress: string) {
+    const normalizedWalletAddress = normalizeWalletAddress(walletAddress)
+    const user = await prisma.user.findUnique({
+      where: { walletAddress: normalizedWalletAddress },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true,
+        status: true,
+      },
+    })
+
+    if (!user) {
+      return {
+        walletAddress: normalizedWalletAddress,
+        isRegistered: false,
+      }
+    }
+
+    return {
+      walletAddress: normalizedWalletAddress,
+      isRegistered: true,
+      isVerified: user.isVerified,
+      status: user.status,
+      maskedEmail: maskEmail(user.email),
     }
   },
 

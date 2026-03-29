@@ -74,6 +74,21 @@ export const authController = {
     }
   },
 
+  async walletStatus(req: AuthRequest, res: Response) {
+    try {
+      const { walletAddress } = req.query
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: 'walletAddress is required' })
+      }
+      const data = await authService.getWalletRegistrationStatus(walletAddress.trim())
+      return res.json(data)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to check wallet status'
+      const invalidAddress = message.toLowerCase().includes('invalid address')
+      return res.status(invalidAddress ? 400 : 500).json({ message })
+    }
+  },
+
   async walletLogin(req: AuthRequest, res: Response) {
     try {
       const { walletAddress, signature } = req.body
