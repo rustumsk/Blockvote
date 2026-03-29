@@ -1,11 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Phone,
+  User,
+  Wallet,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Eye, EyeOff, Mail, Lock, User, Phone, Shield, Vote, Search } from 'lucide-react';
+import { authApi, type WalletRegistrationStatus } from '../../api/client';
+import { AuthShell, AuthStatusScreen } from '../../components/auth/AuthShell';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
-import { notifyError, notifySuccess } from '../../lib/toast';
-import { clearPendingWallet, getPendingWallet, requestWalletAddress, setPendingWallet } from '../../utils/wallet';
+import { notifyError, notifyInfo, notifySuccess } from '../../lib/toast';
+import {
+  clearPendingWallet,
+  getPendingWallet,
+  requestWalletAddress,
+  setPendingWallet,
+} from '../../utils/wallet';
 
 const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,12 +37,43 @@ const RegisterPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(() => getPendingWallet());
   const [connectingWallet, setConnectingWallet] = useState(false);
+  const [walletStatus, setWalletStatus] = useState<WalletRegistrationStatus | null>(null);
+  const [checkingWallet, setCheckingWallet] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     setWalletAddress(getPendingWallet());
   }, []);
+
+  useEffect(() => {
+    if (!walletAddress) {
+      setWalletStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingWallet(true);
+
+    authApi
+      .getWalletStatus(walletAddress)
+      .then((status) => {
+        if (cancelled) return;
+        setWalletStatus(status);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setWalletStatus(null);
+        notifyError(error instanceof Error ? error.message : 'Failed to check wallet status');
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingWallet(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [walletAddress]);
 
   const shortWallet = useMemo(() => {
     if (!walletAddress) return '';
@@ -35,10 +83,17 @@ const RegisterPage = () => {
   const handleConnectWallet = async () => {
     setConnectingWallet(true);
     try {
+      notifyInfo('Open MetaMask to connect the wallet you want tied to this account.');
       const address = await requestWalletAddress();
       setPendingWallet(address);
       setWalletAddress(address);
-      notifySuccess('Wallet connected. You can continue registration now.');
+      const status = await authApi.getWalletStatus(address);
+      setWalletStatus(status);
+      if (status.isRegistered) {
+        notifyInfo('This wallet is already linked to an existing Blockvote account.');
+      } else {
+        notifySuccess('Wallet connected. You can continue registration now.');
+      }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : 'Failed to connect wallet');
     } finally {
@@ -48,12 +103,36 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { notifyError('Name is required'); return; }
-    if (!email.trim()) { notifyError('Email is required'); return; }
-    if (!password) { notifyError('Password is required'); return; }
-    if (password !== confirmPassword) { notifyError('Passwords do not match'); return; }
-    if (!walletAddress) { notifyError('Connect your wallet before registering'); return; }
-    if (!agreed) { notifyError('Please agree to the Terms & Conditions'); return; }
+
+    if (!name.trim()) {
+      notifyError('Name is required.');
+      return;
+    }
+    if (!email.trim()) {
+      notifyError('Email is required.');
+      return;
+    }
+    if (!password) {
+      notifyError('Password is required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      notifyError('Passwords do not match.');
+      return;
+    }
+    if (!walletAddress) {
+      notifyError('Connect your wallet before registering.');
+      return;
+    }
+    if (!agreed) {
+      notifyError('Please agree to the terms before continuing.');
+      return;
+    }
+    if (walletStatus?.isRegistered) {
+      notifyError('This wallet is already registered. Please sign in instead.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await register({
@@ -66,7 +145,7 @@ const RegisterPage = () => {
       clearPendingWallet();
       setSuccess(true);
       notifySuccess('Registration successful. Check your email to verify your account.');
-      setTimeout(() => navigate('/login', { replace: true }), 2500);
+      window.setTimeout(() => navigate('/login', { replace: true }), 2500);
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -76,142 +155,162 @@ const RegisterPage = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-2xl border border-bv-border bg-bv-surface p-8 text-center shadow-2xl shadow-black/30">
-          <div className="w-14 h-14 rounded-2xl bg-bv-accent-muted flex items-center justify-center mx-auto mb-4">
-            <Box size={28} className="text-bv-accent" />
-          </div>
-          <h2 className="text-lg font-bold text-bv-ink mb-2">Check your email</h2>
-          <p className="text-bv-ink-secondary text-sm">
-            We sent a verification link to <strong className="text-bv-ink">{email}</strong>. Click it to verify your account, then log in.
-          </p>
-          <p className="text-bv-ink-muted text-xs mt-4">Redirecting to login...</p>
-        </div>
-      </div>
+      <AuthStatusScreen
+        tone="success"
+        eyebrow="Verification Sent"
+        title="Check your inbox."
+        description={
+          <>
+            We sent a verification link to <strong className="text-white">{email}</strong>. Open
+            it to activate your account, then return here to sign in.
+          </>
+        }
+        note="Redirecting you to login..."
+        icon={<CheckCircle2 size={28} className="text-bv-accent" />}
+      />
     );
   }
 
-  if (!walletAddress) {
+  if (walletAddress && walletStatus?.isRegistered) {
     return (
-      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
-        <div className="w-full max-w-lg rounded-3xl border border-bv-border bg-bv-surface p-8 text-center shadow-2xl shadow-black/30">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-bv-accent/20 bg-bv-accent-muted">
-            <Box size={30} className="text-bv-accent" />
-          </div>
-          <h1 className="text-2xl font-bold text-bv-ink">Connect your wallet first</h1>
-          <p className="mt-3 text-sm leading-relaxed text-bv-ink-secondary">
-            Blockvote now requires a wallet before account creation so your voter profile and MetaMask identity stay aligned from the start.
-          </p>
-          <div className="mt-6 rounded-2xl border border-bv-border bg-bv-bg px-4 py-4 text-left">
-            <p className="text-sm font-semibold text-bv-ink">Why this is required</p>
-            <p className="mt-2 text-xs leading-relaxed text-bv-ink-secondary">
-              Your wallet is used for approval checks, vote casting, and wallet sign-in. Connect it now, then finish the registration form.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            fullWidth
-            className="!mt-6"
-            onClick={handleConnectWallet}
-            disabled={connectingWallet}
-          >
-            {connectingWallet ? 'Connecting wallet...' : 'Connect Wallet To Register'}
-          </Button>
-          <p className="mt-5 text-center">
-            <Link to="/login" className="text-bv-accent text-sm hover:underline">
-              Already registered? Sign in
+      <AuthStatusScreen
+        eyebrow="Wallet Found"
+        title="This wallet is already registered."
+        description={
+          <>
+            {walletStatus.maskedEmail ? (
+              <>
+                We found an existing account linked to <strong className="text-white">{walletStatus.maskedEmail}</strong>.
+              </>
+            ) : (
+              'We found an existing Blockvote account linked to this wallet.'
+            )}{' '}
+            {walletStatus.isVerified
+              ? 'Use the sign-in flow instead of creating a new account.'
+              : 'Verify that account from your email, then sign in.'}
+          </>
+        }
+        note={
+          walletStatus.isVerified
+            ? 'If this is your wallet, continue to login.'
+            : 'Once the email is verified, wallet sign-in will work too.'
+        }
+        icon={<Wallet size={28} className="text-bv-accent" />}
+        action={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/login">
+              <Button variant="primary" size="lg">
+                Go to login
+                <ArrowRight size={16} />
+              </Button>
             </Link>
-          </p>
-        </div>
-      </div>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-6 py-3 text-sm font-medium text-bv-ink transition-colors hover:border-bv-accent hover:text-bv-accent"
+              onClick={() => {
+                clearPendingWallet();
+                setWalletAddress(null);
+                setWalletStatus(null);
+              }}
+            >
+              Use another wallet
+            </button>
+          </div>
+        }
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
-      <div
-        className="w-full max-w-4xl flex rounded-2xl overflow-hidden border border-bv-border shadow-2xl shadow-black/30"
-      >
-        <div
-          className="relative w-[42%] flex-shrink-0 flex flex-col justify-between p-8 overflow-hidden bg-bv-bg"
-        >
-          <div
-            className="absolute -top-20 -left-20 w-64 h-64 rounded-full pointer-events-none opacity-40"
-            style={{
-              background: 'radial-gradient(circle, rgba(0,212,200,0.2) 0%, transparent 70%)',
-              filter: 'blur(50px)',
-            }}
-          />
+    <AuthShell
+      eyebrow="Create Account"
+      title="Set up a voter profile with a linked wallet."
+      description="Registration starts with identity details and the wallet you'll use later for approval checks and ballot signing."
+      asideNote="Admin approval still happens after signup, but the account and wallet are connected from the beginning."
+    >
+      <div className="max-w-xl">
+        <p className="text-sm text-bv-ink-secondary">
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-bv-accent transition-opacity hover:opacity-80">
+            Log in
+          </Link>
+        </p>
 
-          <div className="relative flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-bv-accent rounded-lg flex items-center justify-center">
-              <Box size={16} className="text-bv-bg" />
-            </div>
-            <span className="text-bv-ink font-bold text-base tracking-wide">BLOCKVOTE</span>
-          </div>
-
-          <div className="relative flex-1 flex flex-col items-center justify-center py-10 gap-7">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-bv-accent-muted border border-bv-accent/15">
-              <Box size={36} className="text-bv-accent" />
+        <div className="mt-10 rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-8">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
+                Account details
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+                Register for Blockvote
+              </h2>
             </div>
 
-            <div className="space-y-3 w-full max-w-[200px]">
-              {[
-                { icon: Shield, text: 'Register & Get Approved' },
-                { icon: Vote, text: 'Cast Your Vote Securely' },
-                { icon: Search, text: 'Verify Anytime On-Chain' },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-bv-accent-muted flex items-center justify-center flex-shrink-0">
-                    <Icon size={13} className="text-bv-accent" />
-                  </div>
-                  <span className="text-bv-ink-secondary text-xs">{text}</span>
-                </div>
-              ))}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-bv-ink-muted">Wallet</p>
+              <p className="mt-2 font-mono text-sm text-white">
+                {walletAddress ? shortWallet : 'Not linked'}
+              </p>
             </div>
           </div>
 
-          <div className="relative">
-            <p className="text-bv-ink font-semibold text-sm leading-snug">
-              Secure. Transparent.
-              <br />
-              Tamper-Proof Voting.
+          <Button
+            type="button"
+            variant="outline"
+            fullWidth
+            size="lg"
+            className="border-white/10 bg-white/[0.03]"
+            onClick={handleConnectWallet}
+            loading={connectingWallet || checkingWallet}
+          >
+            <Wallet size={16} />
+            {walletAddress
+              ? connectingWallet || checkingWallet
+                ? 'Updating wallet...'
+                : 'Change connected wallet'
+              : connectingWallet || checkingWallet
+                ? 'Connecting wallet...'
+                : 'Connect wallet'}
+          </Button>
+
+          <div className="mt-4 rounded-2xl border border-bv-accent/15 bg-bv-accent-muted/40 px-4 py-3">
+            <p className="text-xs leading-6 text-bv-ink-secondary">
+              Your wallet is required before registration so vote casting and wallet sign-in stay
+              aligned from the first step.
             </p>
-            <p className="text-bv-ink-muted text-[11px] mt-1">Powered by blockchain technology</p>
-          </div>
-        </div>
-
-        <div className="flex-1 bg-bv-surface flex flex-col justify-center px-10 py-10">
-          <h1 className="text-2xl font-bold text-bv-ink mb-1">Create an account</h1>
-          <p className="text-bv-ink-secondary text-sm mb-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-bv-accent hover:underline font-medium">
-              Log in
-            </Link>
-          </p>
-
-          <div className="mb-5 rounded-2xl border border-bv-accent/20 bg-bv-accent-muted/40 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bv-accent">Linked wallet</p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="font-mono text-sm text-bv-ink">{shortWallet}</span>
-              <button
-                type="button"
-                className="text-xs font-medium text-bv-accent hover:underline"
-                onClick={handleConnectWallet}
-                disabled={connectingWallet}
-              >
-                {connectingWallet ? 'Updating...' : 'Change wallet'}
-              </button>
-            </div>
           </div>
 
-          <form className="space-y-3" onSubmit={handleSubmit}>
-            <Input type="text" placeholder="Full name" icon={<User size={15} />} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-            <Input type="email" placeholder="Email address" icon={<Mail size={15} />} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-            <Input type="tel" placeholder="Phone number (optional)" icon={<Phone size={15} />} value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <Input
+              label="Full name"
+              type="text"
+              placeholder="Your full name"
+              icon={<User size={15} />}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              icon={<Mail size={15} />}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              placeholder="Optional phone number"
+              icon={<Phone size={15} />}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
+            />
+            <Input
+              label="Password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a password"
               icon={<Lock size={15} />}
@@ -219,68 +318,74 @@ const RegisterPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
               rightElement={
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-bv-ink-muted hover:text-bv-ink-secondary transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="text-bv-ink-muted transition-colors hover:text-bv-ink-secondary"
+                >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               }
             />
             <Input
+              label="Confirm password"
               type={showConfirm ? 'text' : 'password'}
-              placeholder="Confirm your password"
+              placeholder="Repeat your password"
               icon={<Lock size={15} />}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
               rightElement={
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-bv-ink-muted hover:text-bv-ink-secondary transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((value) => !value)}
+                  className="text-bv-ink-muted transition-colors hover:text-bv-ink-secondary"
+                >
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               }
             />
 
-            <label className="flex items-center gap-3 cursor-pointer pt-1">
-              <div
-                role="button"
-                tabIndex={0}
-                className={`w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-colors ${
-                  agreed ? 'bg-bv-accent border-bv-accent' : 'border-bv-border bg-bv-bg'
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <button
+                type="button"
+                aria-pressed={agreed}
+                onClick={() => setAgreed((value) => !value)}
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                  agreed
+                    ? 'border-bv-accent bg-bv-accent text-bv-bg'
+                    : 'border-white/[0.12] bg-white/[0.04] text-transparent'
                 }`}
-                onClick={() => setAgreed(!agreed)}
-                onKeyDown={(e) => e.key === 'Enter' && setAgreed((a) => !a)}
               >
-                {agreed && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4l3 3 5-6" stroke="#0e0f14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-bv-ink-secondary text-xs">
+                <CheckCircle2 size={12} />
+              </button>
+              <span className="text-xs leading-6 text-bv-ink-secondary">
                 I agree to the{' '}
-                <a href="#" className="text-bv-accent hover:underline" onClick={(e) => e.preventDefault()}>
+                <a
+                  href="#"
+                  className="text-bv-accent hover:underline"
+                  onClick={(e) => e.preventDefault()}
+                >
                   Terms & Conditions
-                </a>
+                </a>{' '}
+                and understand my account must be approved before I can vote.
               </span>
             </label>
 
-            <Button type="submit" variant="primary" fullWidth size="lg" className="!mt-4" disabled={submitting}>
+            <Button type="submit" variant="primary" fullWidth size="lg" loading={submitting}>
               {submitting ? 'Creating account...' : 'Create account'}
+              {!submitting ? <ArrowRight size={16} /> : null}
             </Button>
           </form>
-
-          <div className="mt-4 p-3 bg-amber-500/8 border border-amber-500/15 rounded-xl">
-            <p className="text-amber-400 text-xs text-center leading-relaxed">
-              Your account will be reviewed and approved by an admin before you can vote.
-            </p>
-          </div>
-
-          <p className="text-center mt-5">
-            <Link to="/" className="text-bv-ink-muted text-xs hover:text-bv-ink-secondary transition-colors">
-              &larr; Back to home
-            </Link>
-          </p>
         </div>
+
+        <p className="mt-6 text-center">
+          <Link to="/" className="text-sm text-bv-ink-muted transition-colors hover:text-bv-ink-secondary">
+            &larr; Back to home
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

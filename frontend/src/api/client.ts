@@ -13,6 +13,14 @@ export type User = {
   updatedAt?: string
 }
 
+export type WalletRegistrationStatus = {
+  walletAddress: string
+  isRegistered: boolean
+  isVerified?: boolean
+  status?: string
+  maskedEmail?: string
+}
+
 function getToken(): string | null {
   return localStorage.getItem('blockvote_token')
 }
@@ -61,6 +69,12 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ walletAddress }),
     })
+  },
+
+  getWalletStatus(walletAddress: string) {
+    return api<WalletRegistrationStatus>(
+      `/api/auth/wallet/status?walletAddress=${encodeURIComponent(walletAddress)}`
+    )
   },
 
   loginWithWallet(body: { walletAddress: string; signature: string }) {

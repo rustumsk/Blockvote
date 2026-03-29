@@ -70,6 +70,8 @@ function App() {
           pauseOnHover
           draggable
           theme="dark"
+          toastClassName="bv-toast"
+          progressClassName="bv-toast__progress"
         />
       </>
     </BrowserRouter>

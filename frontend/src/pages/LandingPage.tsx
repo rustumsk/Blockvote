@@ -123,7 +123,7 @@ const LandingPage = () => {
 
           <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] lg:items-end">
             <div className="max-w-3xl">
-              <div className="hero-entrance hero-entrance--delay-1 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-bv-ink-secondary backdrop-blur-xl">
+              <div className="hero-entrance hero-entrance--delay-1 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-bv-ink-secondary backdrop-blur-xl">
                 <span className="h-2 w-2 rounded-full bg-bv-accent shadow-[0_0_20px_rgba(0,212,200,0.75)]" />
                 Blockvote
               </div>
@@ -147,7 +147,7 @@ const LandingPage = () => {
                   </Button>
                 </Link>
                 <a href="#verification-story">
-                  <Button variant="outline" size="lg" className="border-white/12 bg-white/4">
+                  <Button variant="outline" size="lg" className="border-white/[0.12] bg-white/[0.04]">
                     See verification flow
                   </Button>
                 </a>
@@ -204,7 +204,7 @@ const LandingPage = () => {
           <div className="mx-auto max-w-6xl">
             <div
               data-reveal
-              className="reveal-element grid gap-12 border-y border-white/8 py-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start"
+              className="reveal-element grid gap-12 border-y border-white/[0.08] py-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start"
             >
               <div className="max-w-sm">
                 <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
@@ -271,7 +271,7 @@ const LandingPage = () => {
                   style={{ transitionDelay: `${index * 100}ms` }}
                 >
                   <div className="flex items-start gap-5">
-                    <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-bv-accent">
+                    <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-bv-accent">
                       <note.icon size={20} />
                     </div>
                     <div>
@@ -316,7 +316,7 @@ const LandingPage = () => {
                   </Button>
                 </Link>
                 <Link to="/elections">
-                  <Button variant="outline" size="lg" className="border-white/12 bg-white/4">
+                  <Button variant="outline" size="lg" className="border-white/[0.12] bg-white/[0.04]">
                     Browse elections
                   </Button>
                 </Link>

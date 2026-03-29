@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { ArrowRight, Eye, EyeOff, LoaderCircle, Lock, Mail, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Eye, EyeOff, Mail, Lock, Shield, Vote, Search } from 'lucide-react';
+import { authApi } from '../../api/client';
+import { AuthShell, AuthStatusScreen } from '../../components/auth/AuthShell';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
-import { authApi } from '../../api/client';
-import { notifyError, notifySuccess } from '../../lib/toast';
+import { notifyError, notifyInfo, notifySuccess } from '../../lib/toast';
 import { requestWalletAddress, signWalletMessage } from '../../utils/wallet';
 
 const LoginPage = () => {
@@ -25,15 +26,17 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      notifyError('Email and password are required');
+      notifyError('Email and password are required.');
       return;
     }
+
     setSubmitting(true);
     try {
-      const user = await login(email.trim(), password);
+      const currentUser = await login(email.trim(), password);
       notifySuccess('Signed in successfully.');
-      if (user.role === 'ADMIN') navigate('/admin/dashboard', { replace: true });
-      else navigate('/voter/dashboard', { replace: true });
+      navigate(currentUser.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', {
+        replace: true,
+      });
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -44,15 +47,20 @@ const LoginPage = () => {
   const handleWalletLogin = async () => {
     setWalletSubmitting(true);
     try {
+      notifyInfo('Open MetaMask to confirm the sign-in message.');
       const walletAddress = await requestWalletAddress();
       const { message } = await authApi.requestWalletLoginNonce(walletAddress);
       const signed = await signWalletMessage(message);
+
       if (signed.address.toLowerCase() !== walletAddress.toLowerCase()) {
         throw new Error('Please sign in with the same wallet account you connected.');
       }
-      const user = await loginWithWallet(walletAddress, signed.signature);
+
+      const currentUser = await loginWithWallet(walletAddress, signed.signature);
       notifySuccess('Signed in with MetaMask.');
-      navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+      navigate(currentUser.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', {
+        replace: true,
+      });
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'Wallet login failed');
     } finally {
@@ -62,93 +70,57 @@ const LoginPage = () => {
 
   if (loading && token) {
     return (
-      <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-bv-border bg-bv-surface p-8 text-center">
-          <div className="mx-auto mb-4 h-10 w-10 rounded-xl bg-bv-accent-muted flex items-center justify-center">
-            <Box size={20} className="text-bv-accent" />
-          </div>
-          <h1 className="text-xl font-bold text-bv-ink">Checking your session</h1>
-          <p className="mt-2 text-sm text-bv-ink-secondary">
-            You already have a saved token, so Blockvote is authenticating you now.
-          </p>
-        </div>
-      </div>
+      <AuthStatusScreen
+        eyebrow="Session Restore"
+        title="Checking your saved access."
+        description="Your Blockvote session is still active, so we're validating it before sending you back in."
+        note="This usually takes a moment."
+        icon={<LoaderCircle className="animate-spin text-bv-accent" size={28} />}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-bv-bg-deep flex items-center justify-center p-6">
-      <div
-        className="w-full max-w-4xl flex rounded-2xl overflow-hidden border border-bv-border shadow-2xl shadow-black/30"
-      >
-        <div
-          className="relative w-[45%] flex-shrink-0 flex flex-col justify-between p-8 overflow-hidden bg-bv-bg"
-        >
-          <div
-            className="absolute -top-20 -left-20 w-64 h-64 rounded-full pointer-events-none opacity-40"
-            style={{
-              background: 'radial-gradient(circle, rgba(0,212,200,0.2) 0%, transparent 70%)',
-              filter: 'blur(50px)',
-            }}
-          />
+    <AuthShell
+      eyebrow="Sign In"
+      title="Return to the verified voting flow."
+      description="Use your email and password or confirm a wallet signature to continue where you left off."
+      footer={
+        <p className="text-center text-xs text-bv-ink-muted">
+          Use the wallet already linked to your account when signing in with MetaMask.
+        </p>
+      }
+    >
+      <div className="max-w-xl">
+        <p className="text-sm text-bv-ink-secondary">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="font-medium text-bv-accent transition-opacity hover:opacity-80">
+            Register now
+          </Link>
+        </p>
 
-          <div className="relative flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-bv-accent rounded-lg flex items-center justify-center">
-              <Box size={16} className="text-bv-bg" />
-            </div>
-            <span className="text-bv-ink font-bold text-base tracking-wide">BLOCKVOTE</span>
-          </div>
-
-          <div className="relative flex-1 flex flex-col items-center justify-center py-10 gap-7">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-bv-accent-muted border border-bv-accent/15">
-              <Box size={36} className="text-bv-accent" />
-            </div>
-
-            <div className="space-y-3 w-full max-w-[200px]">
-              {[
-                { icon: Shield, text: 'Register & Get Approved' },
-                { icon: Vote, text: 'Cast Your Vote Securely' },
-                { icon: Search, text: 'Verify Anytime On-Chain' },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-bv-accent-muted flex items-center justify-center flex-shrink-0">
-                    <Icon size={13} className="text-bv-accent" />
-                  </div>
-                  <span className="text-bv-ink-secondary text-xs">{text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative">
-            <p className="text-bv-ink font-semibold text-sm leading-snug">
-              Secure. Transparent.
-              <br />
-              Tamper-Proof Voting.
+        <div className="mt-10 rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-8">
+          <div className="mb-6">
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bv-accent">
+              Account access
             </p>
-            <p className="text-bv-ink-muted text-[11px] mt-1">Powered by blockchain technology</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+              Welcome back
+            </h2>
           </div>
-        </div>
-
-        <div className="flex-1 bg-bv-surface flex flex-col justify-center px-10 py-10">
-          <h1 className="text-2xl font-bold text-bv-ink mb-1">Welcome back</h1>
-          <p className="text-bv-ink-secondary text-sm mb-8">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-bv-accent hover:underline font-medium">
-              Register
-            </Link>
-          </p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
+              label="Email"
               type="email"
-              placeholder="Email address"
+              placeholder="you@example.com"
               icon={<Mail size={16} />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
             />
             <Input
+              label="Password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               icon={<Lock size={16} />}
@@ -158,26 +130,22 @@ const LoginPage = () => {
               rightElement={
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-bv-ink-muted hover:text-bv-ink-secondary transition-colors"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="text-bv-ink-muted transition-colors hover:text-bv-ink-secondary"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               }
             />
 
-            <Button type="submit" variant="primary" fullWidth size="lg" disabled={submitting}>
-              {submitting ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" variant="primary" fullWidth size="lg" loading={submitting}>
+              {submitting ? 'Signing in...' : 'Sign in'}
+              {!submitting ? <ArrowRight size={16} /> : null}
             </Button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-bv-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-4 bg-bv-surface text-bv-ink-muted text-xs">or sign in with</span>
-            </div>
+          <div className="auth-divider my-6">
+            <span>or continue with</span>
           </div>
 
           <Button
@@ -185,24 +153,22 @@ const LoginPage = () => {
             variant="outline"
             fullWidth
             size="lg"
+            className="border-white/10 bg-white/[0.03]"
             onClick={handleWalletLogin}
-            disabled={walletSubmitting}
+            loading={walletSubmitting}
           >
-            {walletSubmitting ? 'Waiting for MetaMask...' : 'Sign In With MetaMask'}
+            <Wallet size={16} />
+            {walletSubmitting ? 'Waiting for MetaMask...' : 'Sign in with MetaMask'}
           </Button>
-
-          <p className="mt-3 text-center text-xs text-bv-ink-muted">
-            Use the wallet already linked to your Blockvote account.
-          </p>
-
-          <p className="text-center mt-6">
-            <Link to="/" className="text-bv-ink-muted text-xs hover:text-bv-ink-secondary transition-colors">
-              &larr; Back to home
-            </Link>
-          </p>
         </div>
+
+        <p className="mt-6 text-center">
+          <Link to="/" className="text-sm text-bv-ink-muted transition-colors hover:text-bv-ink-secondary">
+            &larr; Back to home
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 
