@@ -22,7 +22,7 @@ const Input: React.FC<InputProps> = ({ label, error, icon, rightElement, classNa
           </div>
         )}
         <input
-          className={`bg-bv-bg border border-bv-border rounded-xl px-4 py-3 text-bv-ink placeholder-bv-ink-muted text-sm focus:border-bv-accent focus:ring-1 focus:ring-bv-accent/30 focus:outline-none w-full transition-all duration-150 ${icon ? 'pl-10' : ''} ${rightElement ? 'pr-12' : ''} ${className}`}
+          className={`w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-bv-ink placeholder-bv-ink-muted transition-all duration-150 focus:border-bv-accent focus:bg-white/[0.06] focus:ring-1 focus:ring-bv-accent/30 focus:outline-none ${icon ? 'pl-11' : ''} ${rightElement ? 'pr-12' : ''} ${className}`}
           {...props}
         />
         {rightElement && (

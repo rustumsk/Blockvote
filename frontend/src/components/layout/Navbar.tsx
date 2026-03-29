@@ -52,7 +52,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <Link to={dashboardHref}>
-                <Button variant="outline" size="sm" className="border-white/12 bg-white/4">
+                <Button variant="outline" size="sm" className="border-white/[0.12] bg-white/[0.04]">
                   <LayoutDashboard size={14} />
                   <span className="hidden sm:inline">Dashboard</span>
                 </Button>
@@ -65,7 +65,7 @@ const Navbar = () => {
           ) : (
             <>
               <Link to="/login">
-                <Button variant="outline" size="sm" className="border-white/12 bg-white/4">
+                <Button variant="outline" size="sm" className="border-white/[0.12] bg-white/[0.04]">
                   Log in
                 </Button>
               </Link>

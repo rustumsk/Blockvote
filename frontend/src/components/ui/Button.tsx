@@ -4,6 +4,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
+  loading?: boolean;
   children: React.ReactNode;
 }
 
@@ -11,12 +12,14 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   fullWidth = false,
+  loading = false,
   children,
   className = '',
+  disabled,
   ...props
 }) => {
   const base =
-    'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-bv-accent/50';
+    'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-bv-accent/50';
 
   const variants = {
     primary:
@@ -38,8 +41,11 @@ const Button: React.FC<ButtonProps> = ({
   return (
     <button
       className={`${base} ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
+      disabled={loading || disabled}
+      aria-busy={loading || undefined}
       {...props}
     >
+      {loading ? <span className="button-spinner" aria-hidden="true" /> : null}
       {children}
     </button>
   );
