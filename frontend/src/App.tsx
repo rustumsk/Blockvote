@@ -17,6 +17,7 @@ import ManageElectionsPage from './pages/admin/ManageElectionsPage';
 import ManageVotersPage from './pages/admin/ManageVotersPage';
 import BlockchainLogsPage from './pages/admin/BlockchainLogsPage';
 import ElectionDetailPage from './pages/admin/ElectionDetailPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import PublicElectionsPage from './pages/public/PublicElectionsPage';
 import PublishedElectionsPage from './pages/public/PublishedElectionsPage';
 import CandidateProfilePage from './pages/public/CandidateProfilePage';
@@ -58,6 +59,7 @@ function App() {
             <Route path="/admin/elections/:id" element={<ElectionDetailPage />} />
             <Route path="/admin/voters" element={<ManageVotersPage />} />
             <Route path="/admin/logs" element={<BlockchainLogsPage />} />
+            <Route path="/admin/settings" element={<AdminSettingsPage />} />
           </Route>
         </Routes>
         <ToastContainer
