@@ -48,7 +48,7 @@ const VerifyPage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto flex items-start justify-center">
+      <main className="ml-56 flex flex-1 items-start justify-center overflow-y-auto p-8">
         <div className="w-full max-w-lg mt-8">
           {/* Title */}
           <div className="text-center mb-8">

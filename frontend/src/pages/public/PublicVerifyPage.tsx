@@ -19,13 +19,19 @@ const PublicVerifyPage = () => {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!txHash.trim()) return;
+    const value = txHash.trim();
+    if (!value) return;
+    if (!/^0x[a-fA-F0-9]{64}$/.test(value)) {
+      setError('Enter a valid transaction hash (0x + 64 hex characters).');
+      setResult(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const res = await votesApi.verify(txHash.trim());
+      const res = await votesApi.verify(value);
       if (!res.verified) {
         setError('Vote not found for this transaction hash.');
         return;
@@ -75,6 +81,21 @@ const PublicVerifyPage = () => {
               <Button variant="primary" size="lg" type="submit" disabled={loading}>
                 {loading ? 'Verifying...' : 'Verify Transaction'}
               </Button>
+              {txHash && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setTxHash('');
+                    setError(null);
+                    setResult(null);
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
             {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
           </form>

@@ -58,6 +58,7 @@ const PublicElectionsPage = () => {
     () => elections.filter((election) => election.resultsPublished).length,
     [elections]
   )
+  const hasFilters = activeTab !== 'all' || search.trim().length > 0
 
   return (
     <div className="min-h-screen bg-bv-bg text-bv-ink">
@@ -105,15 +106,29 @@ const PublicElectionsPage = () => {
           </div>
         </div>
 
-        <div className="relative w-full max-w-sm mb-6">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search elections..."
-            className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
-          />
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-bv-ink-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search elections..."
+              className="bg-bv-surface border border-bv-border rounded-lg pl-9 pr-4 py-2.5 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full text-sm"
+            />
+          </div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('all')
+                setSearch('')
+              }}
+              className="inline-flex items-center justify-center rounded-lg border border-bv-border px-3 py-2 text-xs text-bv-ink-secondary transition-colors hover:text-bv-ink"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
@@ -139,7 +154,9 @@ const PublicElectionsPage = () => {
         {loading ? (
           <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-bv-ink-muted">No elections found.</div>
+          <div className="rounded-xl border border-bv-border bg-bv-surface p-8 text-center text-sm text-bv-ink-muted">
+            No elections match your current search or status filter.
+          </div>
         ) : (
           <>
             <section className="mb-12">
@@ -147,7 +164,7 @@ const PublicElectionsPage = () => {
                 <Calendar size={20} />
                 Election schedule
               </h2>
-              <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
+              <div className="overflow-x-auto rounded-xl border border-bv-border bg-bv-surface">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-bv-border">
@@ -194,6 +211,7 @@ const PublicElectionsPage = () => {
                     candidateCount={election.candidateCount}
                     hasVoted={false}
                     role="public"
+                    syncState={election.contractElectionId != null ? 'synced' : 'needs-sync'}
                   />
                 ))}
               </div>

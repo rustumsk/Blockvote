@@ -143,7 +143,7 @@ const ReceiptPage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 overflow-y-auto p-8">
         <div className="mx-auto w-full max-w-6xl">
           <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div>

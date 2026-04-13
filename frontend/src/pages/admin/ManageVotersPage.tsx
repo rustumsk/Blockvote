@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, CheckCircle, XCircle, MinusCircle, Trash2 } from 'lucide-react';
 import Sidebar from '../../components/layout/Sidebar';
 import Badge from '../../components/ui/Badge';
-import { organizationsApi, usersApi, type Organization, type User } from '../../api/client';
+import { usersApi, type User } from '../../api/client';
 import { notifyError, notifySuccess } from '../../lib/toast';
-import { useAuth } from '../../context/AuthContext';
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected';
 type VoterStatus = 'pending' | 'approved' | 'rejected';
@@ -19,7 +18,6 @@ interface Voter {
   organizationId?: string | null;
   organizationName?: string | null;
   role: User['role'];
-  canCreateGlobalElections?: boolean;
 }
 
 function formatDate(iso: string | undefined): string {
@@ -44,7 +42,6 @@ function toVoter(u: User): Voter {
     organizationId: u.organizationId,
     organizationName: u.organization?.name ?? null,
     role: u.role,
-    canCreateGlobalElections: u.canCreateGlobalElections,
   };
 }
 
@@ -56,16 +53,12 @@ const tabs: { key: FilterTab; label: string }[] = [
 ];
 
 const ManageVotersPage = () => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [search, setSearch] = useState('');
   const [votersList, setVotersList] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [scopeOrgByUser, setScopeOrgByUser] = useState<Record<string, string>>({});
-  const [scopeGlobalByUser, setScopeGlobalByUser] = useState<Record<string, boolean>>({});
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -83,10 +76,6 @@ const ManageVotersPage = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  useEffect(() => {
-    organizationsApi.list().then(setOrganizations).catch(() => {});
-  }, []);
 
   const updateVoterStatus = (id: string, status: VoterStatus) => {
     setVotersList((prev) => prev.map((v) => (v.id === id ? { ...v, status } : v)));
@@ -145,23 +134,6 @@ const ManageVotersPage = () => {
     }
   };
 
-  const handleSetRoleScope = async (voter: Voter, role: 'ADMIN' | 'VOTER') => {
-    setActioningId(voter.id);
-    try {
-      await usersApi.assignRoleScope(voter.id, {
-        role,
-        organizationId: role === 'ADMIN' ? (scopeOrgByUser[voter.id] || voter.organizationId || '') : undefined,
-        canCreateGlobalElections: role === 'ADMIN' ? Boolean(scopeGlobalByUser[voter.id] ?? voter.canCreateGlobalElections) : false,
-      });
-      notifySuccess(role === 'ADMIN' ? 'User promoted to admin.' : 'User set to voter.');
-      await fetchUsers();
-    } catch (err) {
-      notifyError(err instanceof Error ? err.message : 'Failed to update role scope');
-    } finally {
-      setActioningId(null);
-    }
-  };
-
   const filtered = votersList.filter((v) => {
     const matchesTab = activeTab === 'all' || v.status === activeTab;
     const matchesSearch =
@@ -174,7 +146,7 @@ const ManageVotersPage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 p-8 overflow-y-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-bv-ink">Manage Voters</h1>
@@ -206,7 +178,7 @@ const ManageVotersPage = () => {
           ))}
         </div>
 
-        <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto rounded-xl border border-bv-border bg-bv-surface">
           {loading ? (
             <div className="p-12 text-center text-bv-ink-secondary">Loading voters...</div>
           ) : (
@@ -294,49 +266,6 @@ const ManageVotersPage = () => {
                           >
                             <Trash2 size={12} /> {deletingId === voter.id ? 'Deleting...' : 'Delete'}
                           </button>
-                          {user?.role === 'SUPERADMIN' && (
-                            <>
-                              <select
-                                value={scopeOrgByUser[voter.id] || voter.organizationId || organizations[0]?.id || ''}
-                                onChange={(e) => setScopeOrgByUser((prev) => ({ ...prev, [voter.id]: e.target.value }))}
-                                className="rounded border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-bv-ink"
-                              >
-                                {organizations.map((org) => (
-                                  <option key={org.id} value={org.id}>
-                                    {org.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <label className="flex items-center gap-1 text-xs text-bv-ink-secondary">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(scopeGlobalByUser[voter.id] ?? voter.canCreateGlobalElections)}
-                                  onChange={(e) =>
-                                    setScopeGlobalByUser((prev) => ({ ...prev, [voter.id]: e.target.checked }))
-                                  }
-                                />
-                                Global
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => handleSetRoleScope(voter, 'ADMIN')}
-                                disabled={!!actioningId}
-                                className="rounded-lg bg-blue-500/20 px-2.5 py-1.5 text-xs text-blue-300 transition-colors hover:bg-blue-500/30 disabled:opacity-50"
-                              >
-                                Make Admin
-                              </button>
-                              {voter.role === 'ADMIN' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetRoleScope(voter, 'VOTER')}
-                                  disabled={!!actioningId}
-                                  className="rounded-lg bg-gray-500/20 px-2.5 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-500/30 disabled:opacity-50"
-                                >
-                                  Make Voter
-                                </button>
-                              )}
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>

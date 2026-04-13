@@ -60,11 +60,11 @@ const CandidateProfilePage = () => {
       <Navbar />
       <main className="mx-auto max-w-6xl px-6 pb-16 pt-24">
         <Link
-          to={electionId ? `/elections` : '/'}
+          to={electionId ? `/elections/${electionId}` : '/elections'}
           className="inline-flex items-center gap-2 text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink"
         >
           <ArrowLeft size={16} />
-          Back to elections
+          Back to election details
         </Link>
 
         {loading && <p className="mt-8 text-bv-ink-muted">Loading candidate...</p>}

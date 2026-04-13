@@ -61,7 +61,7 @@ const BlockchainLogsPage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 p-8 overflow-y-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-bv-ink">Blockchain Transaction Logs</h1>

@@ -69,7 +69,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
-      <main className="ml-12 flex-1 overflow-y-auto px-6 py-8 md:px-8">
+      <main className="ml-56 flex-1 overflow-y-auto px-6 py-8 md:px-8">
         <div className="mx-auto w-full max-w-4xl">
           <div className="mx-auto max-w-3xl">
             <div className="mb-8 text-center">

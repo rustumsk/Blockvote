@@ -41,6 +41,7 @@ const PublishedElectionsPage = () => {
         }),
     [elections, search]
   )
+  const hasSearch = search.trim().length > 0
 
   return (
     <div className="min-h-screen bg-bv-bg text-bv-ink">
@@ -89,6 +90,17 @@ const PublishedElectionsPage = () => {
               />
             </div>
           </div>
+          {hasSearch && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="rounded-lg border border-bv-border px-3 py-2 text-xs text-bv-ink-secondary transition-colors hover:text-bv-ink"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -100,7 +112,9 @@ const PublishedElectionsPage = () => {
         {loading ? (
           <div className="py-16 text-center text-bv-ink-muted">Loading published elections...</div>
         ) : publishedElections.length === 0 ? (
-          <div className="py-16 text-center text-bv-ink-muted">No published elections yet.</div>
+          <div className="rounded-xl border border-bv-border bg-bv-surface p-8 text-center text-sm text-bv-ink-muted">
+            No published elections match your search yet.
+          </div>
         ) : (
           <>
             <section className="mt-8">
@@ -108,7 +122,7 @@ const PublishedElectionsPage = () => {
                 <Calendar size={20} />
                 Publication schedule
               </h2>
-              <div className="overflow-hidden rounded-xl border border-bv-border bg-bv-surface">
+              <div className="overflow-x-auto rounded-xl border border-bv-border bg-bv-surface">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-bv-border">

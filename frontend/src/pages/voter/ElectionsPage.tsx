@@ -49,6 +49,7 @@ const ElectionsPage = () => {
     if (scopeTab === 'all') return true
     return e.scope === scopeTab
   })
+  const hasActiveFilters = activeTab !== 'all' || scopeTab !== 'all' || search.trim().length > 0
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
@@ -104,22 +105,46 @@ const ElectionsPage = () => {
         <div className="mb-6 flex items-center gap-2">
           <button
             onClick={() => setScopeTab('all')}
-            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'all' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+            className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+              scopeTab === 'all'
+                ? 'border-bv-accent bg-bv-accent text-bv-bg'
+                : 'border-bv-border text-bv-ink-secondary hover:text-bv-ink'
+            }`}
           >
             All scopes
           </button>
           <button
             onClick={() => setScopeTab('ORGANIZATION')}
-            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'ORGANIZATION' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+            className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+              scopeTab === 'ORGANIZATION'
+                ? 'border-bv-accent bg-bv-accent text-bv-bg'
+                : 'border-bv-border text-bv-ink-secondary hover:text-bv-ink'
+            }`}
           >
             My organization
           </button>
           <button
             onClick={() => setScopeTab('GLOBAL')}
-            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'GLOBAL' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+            className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+              scopeTab === 'GLOBAL'
+                ? 'border-bv-accent bg-bv-accent text-bv-bg'
+                : 'border-bv-border text-bv-ink-secondary hover:text-bv-ink'
+            }`}
           >
             Global
           </button>
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setActiveTab('all')
+                setScopeTab('all')
+                setSearch('')
+              }}
+              className="ml-1 rounded-lg border border-bv-border px-3 py-2 text-xs text-bv-ink-secondary transition-colors hover:text-bv-ink"
+            >
+              Clear filters
+            </button>
+          )}
           <span className="ml-2 text-xs text-bv-ink-muted">
             {user?.organization?.name ? `Org: ${user.organization.name}` : ''}
           </span>
@@ -128,9 +153,11 @@ const ElectionsPage = () => {
         {loading ? (
           <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-bv-ink-muted">No elections found.</div>
+          <div className="rounded-xl border border-bv-border bg-bv-surface p-8 text-center text-sm text-bv-ink-muted">
+            No elections found for this filter set. Try changing status/scope or clearing search.
+          </div>
         ) : (
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((election) => (
               <ElectionCard
                 key={election.id}
@@ -143,6 +170,7 @@ const ElectionsPage = () => {
                 candidateCount={election.candidateCount}
                 hasVoted={false}
                 role="voter"
+                syncState={election.contractElectionId != null ? 'synced' : 'needs-sync'}
               />
             ))}
           </div>

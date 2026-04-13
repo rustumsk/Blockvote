@@ -16,6 +16,7 @@ interface ElectionCardProps {
   candidateCount: number;
   hasVoted?: boolean;
   role?: 'voter' | 'admin' | 'public';
+  syncState?: 'synced' | 'needs-sync';
 }
 
 function formatShort(iso: string) {
@@ -49,6 +50,7 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   candidateCount,
   hasVoted = false,
   role = 'voter',
+  syncState,
 }) => {
   const [now, setNow] = useState(() => Date.now());
 
@@ -74,9 +76,22 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   return (
     <div className="group flex flex-col gap-3.5 rounded-2xl border border-white/10 bg-white/[0.015] p-5 transition-colors duration-200 hover:bg-white/[0.03]">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-[15px] font-semibold leading-snug text-bv-ink transition-colors group-hover:text-white">
-          {title}
-        </h3>
+        <div>
+          <h3 className="text-[15px] font-semibold leading-snug text-bv-ink transition-colors group-hover:text-white">
+            {title}
+          </h3>
+          {syncState && (
+            <span
+              className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                syncState === 'synced'
+                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                  : 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+              }`}
+            >
+              {syncState === 'synced' ? 'Synced' : 'Needs Admin Sync'}
+            </span>
+          )}
+        </div>
         <Badge variant={status} />
       </div>
 

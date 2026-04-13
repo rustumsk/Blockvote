@@ -144,6 +144,11 @@ const PublicElectionDetailPage = () => {
                   {election.candidates.length} candidates
                 </span>
               </div>
+              {election.contractElectionId == null && (
+                <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  This election is visible publicly but still needs admin sync for full on-chain linkage.
+                </div>
+              )}
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
@@ -175,18 +180,24 @@ const PublicElectionDetailPage = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {election.candidates.map((candidate) => (
-                  <CandidateCard
-                    key={candidate.id}
-                    {...candidate}
-                    size="compact"
-                    hideVoteButton
-                    profileHref={`/elections/${election.id}/candidates/${candidate.id}`}
-                    highlightLabel={leadingCandidateId === candidate.id ? 'Leading the polls' : null}
-                  />
-                ))}
-              </div>
+              {election.candidates.length === 0 ? (
+                <div className="rounded-2xl border border-bv-border bg-bv-surface p-6 text-center text-sm text-bv-ink-muted">
+                  No candidates have been added yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {election.candidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      {...candidate}
+                      size="compact"
+                      hideVoteButton
+                      profileHref={`/elections/${election.id}/candidates/${candidate.id}`}
+                      highlightLabel={leadingCandidateId === candidate.id ? 'Leading the polls' : null}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="mt-8">
