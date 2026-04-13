@@ -10,7 +10,10 @@ import {
   Users,
   ScrollText,
   Settings,
+  Shield,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import ConnectWalletButton from '../wallet/ConnectWalletButton';
@@ -23,7 +26,7 @@ interface SidebarProps {
 }
 
 const COLLAPSED_WIDTH = '3.5rem';
-const EXPANDED_WIDTH = '15rem';
+const EXPANDED_WIDTH = '14rem';
 
 const voterNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/voter/dashboard' },
@@ -45,58 +48,56 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const navItems = variant === 'admin' ? adminNavItems : voterNavItems;
+  const [isPinned, setIsPinned] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const navItems =
+    variant === 'admin'
+      ? user?.role === 'SUPERADMIN'
+        ? [...adminNavItems, { icon: Shield, label: 'Superadmin', path: '/admin/superadmin' }]
+        : adminNavItems
+      : voterNavItems;
+  const isExpanded = isPinned || isHovered;
 
   const walletShort = user?.walletAddress
     ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`
     : null;
 
-  const labelStyle = (delay: string, expandedWidth: string = '6rem') =>
-    ({
-      opacity: isExpanded ? 1 : 0,
-      width: isExpanded ? expandedWidth : 0,
-      overflow: 'hidden',
-      transition: 'opacity 0.15s ease-out, width 0.15s ease-out',
-      transitionDelay: isExpanded ? delay : '0s',
-      whiteSpace: 'nowrap' as const,
-    });
-
   return (
     <aside
-      className="fixed left-0 top-0 bottom-0 flex flex-col bg-bv-bg border-r border-bv-border z-40 overflow-hidden"
+      className="fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-white/10 bg-[#070707]"
       style={{
         width: isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.2s ease',
       }}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex-shrink-0 p-3 border-b border-bv-border">
-        <Link to="/" className="flex items-center gap-2.5 min-w-0 text-bv-ink no-underline">
-          <div className="w-8 h-8 rounded-lg bg-bv-accent flex items-center justify-center flex-shrink-0">
-            <Box size={16} className="text-bv-bg" />
+      <div className="flex-shrink-0 border-b border-white/10 p-3">
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsPinned((prev) => !prev)}
+            className="rounded-md p-1.5 text-bv-ink-muted transition-colors hover:bg-white/[0.06] hover:text-bv-ink"
+            aria-label={isPinned ? 'Collapse sidebar' : 'Pin sidebar'}
+            title={isPinned ? 'Collapse sidebar' : 'Pin sidebar'}
+          >
+            {isPinned ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+          </button>
+        </div>
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 text-bv-ink no-underline">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white text-black">
+            <Box size={16} />
           </div>
-          <div className="min-w-0 overflow-hidden">
-            <div
-              className="font-bold text-sm tracking-wide overflow-hidden transition-all duration-150 ease-out"
-              style={labelStyle('0.06s', '7rem')}
-            >
-              BLOCKVOTE
-            </div>
+          <div className={`min-w-0 overflow-hidden transition-all ${isExpanded ? 'opacity-100' : 'w-0 opacity-0'}`}>
+            <div className="text-sm font-bold tracking-wide">BLOCKVOTE</div>
             {variant === 'admin' && (
-              <div
-                className="text-bv-ink-muted text-[10px] mt-0.5 overflow-hidden transition-all duration-150 ease-out"
-                style={labelStyle('0.08s', '5rem')}
-              >
-                Admin Panel
-              </div>
+              <div className="mt-0.5 text-[10px] text-bv-ink-muted">Admin Panel</div>
             )}
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -104,17 +105,14 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 min-w-0 ${
+              className={`flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 ${
                 isActive
-                  ? 'text-bv-accent bg-bv-accent-muted'
-                  : 'text-bv-ink-secondary hover:text-bv-ink hover:bg-bv-surface'
+                  ? 'bg-white text-black'
+                  : 'text-bv-ink-secondary hover:bg-white/[0.06] hover:text-bv-ink'
               }`}
             >
               <Icon size={17} className="flex-shrink-0" />
-              <span
-                className="overflow-hidden transition-all duration-150 ease-out"
-                style={labelStyle('0.08s')}
-              >
+              <span className={`overflow-hidden whitespace-nowrap transition-all ${isExpanded ? 'opacity-100' : 'w-0 opacity-0'}`}>
                 {item.label}
               </span>
             </Link>
@@ -122,51 +120,37 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
         })}
       </nav>
 
-      <div className="p-2.5 border-t border-bv-border space-y-2">
-        <div className="flex items-center gap-2.5 min-w-0 px-1">
-          <div className="w-7 h-7 rounded-lg bg-bv-accent-muted flex items-center justify-center flex-shrink-0">
-            <User size={14} className="text-bv-accent" />
+      <div className="space-y-2 border-t border-white/10 p-3">
+        <div className="flex min-w-0 items-center gap-2.5 px-1">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-white/10">
+            <User size={14} className="text-white" />
           </div>
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div
-              className="text-bv-ink text-[13px] font-medium truncate overflow-hidden transition-all duration-150 ease-out"
-              style={labelStyle('0.1s', '8rem')}
-            >
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className={`truncate text-[13px] font-medium text-bv-ink transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
               {user?.name ?? 'Guest'}
             </div>
             {variant === 'admin' ? (
-              <span className="mt-0.5 block overflow-hidden transition-all duration-150 ease-out" style={labelStyle('0.12s', '3.5rem')}>
+              <span className={`mt-0.5 block transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
                 <Badge variant="admin">Admin</Badge>
               </span>
             ) : (
-              <div
-                className="text-bv-ink-muted text-[10px] font-mono truncate overflow-hidden transition-all duration-150 ease-out"
-                style={labelStyle('0.12s', '5.5rem')}
-              >
+              <div className={`truncate font-mono text-[10px] text-bv-ink-muted transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
                 {walletShort ?? 'No wallet'}
               </div>
             )}
           </div>
         </div>
-        <div
-          className="overflow-hidden transition-all duration-150 ease-out"
-          style={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? '100%' : 0, transitionDelay: isExpanded ? '0.12s' : '0s' }}
-        >
-          <ConnectWalletButton variant="outline" size="sm" fullWidth showIcon={true} />
-        </div>
+        {isExpanded && <ConnectWalletButton variant="outline" size="sm" fullWidth showIcon={true} />}
         <button
           type="button"
-          className="flex items-center gap-2.5 w-full text-left text-bv-ink-muted hover:text-red-400 text-[13px] font-medium py-2 rounded-xl hover:bg-red-500/5 px-3 transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-medium text-bv-ink-muted transition-colors hover:bg-white/[0.06] hover:text-bv-ink"
           onClick={() => {
             logout();
             navigate('/');
           }}
         >
           <LogOut size={15} className="flex-shrink-0" />
-          <span
-            className="overflow-hidden transition-all duration-150 ease-out"
-            style={labelStyle('0.14s', '3.5rem')}
-          >
+          <span className={`overflow-hidden whitespace-nowrap transition-all ${isExpanded ? 'opacity-100' : 'w-0 opacity-0'}`}>
             Log out
           </span>
         </button>

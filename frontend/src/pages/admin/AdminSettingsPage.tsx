@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Mail, Phone, Shield, User } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Mail, Phone, Shield, User, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
@@ -153,8 +153,16 @@ const AdminSettingsPage = () => {
                   <p className="mt-1.5 text-xs text-bv-ink-muted">Email cannot be changed.</p>
                 </div>
 
+                <div className="mt-5">
+                  <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Organization</label>
+                  <div className="flex min-h-[50px] items-center gap-3 rounded-xl border border-bv-border bg-bv-bg px-4 py-3 text-sm text-bv-ink-secondary">
+                    <Building2 size={16} className="text-bv-ink-muted" />
+                    <span>{user.organization?.name ?? 'No organization assigned'}</span>
+                  </div>
+                </div>
+
                 <div className="mt-6 flex justify-center md:justify-end">
-                  <Button type="submit" variant="primary" size="lg" disabled={saving}>
+                  <Button type="submit" variant="primary" size="lg" loading={saving}>
                     {saving ? 'Saving...' : 'Save changes'}
                   </Button>
                 </div>
@@ -196,6 +204,7 @@ const AdminSettingsPage = () => {
               <Button
                 variant="danger"
                 onClick={handleDeleteAccount}
+                loading={deleting}
                 disabled={deleteConfirm !== 'DELETE' || deleting}
               >
                 {deleting ? 'Deleting...' : 'Delete my account'}

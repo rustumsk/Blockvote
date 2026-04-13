@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Vote, Users, CheckCircle, Clock } from 'lucide-react';
+import { Users, CheckCircle, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import StatsCard from '../../components/shared/StatsCard';
 import ElectionCard from '../../components/shared/ElectionCard';
-import Button from '../../components/ui/Button';
 import { electionsApi, usersApi, type ElectionListItem, type User } from '../../api/client';
 
 const AdminDashboard = () => {
@@ -16,7 +16,7 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         const [allElections, usersRes] = await Promise.all([
-          electionsApi.getList(),
+          electionsApi.getManageList(),
           usersApi.getUsers(),
         ]);
         setElections(allElections);
@@ -25,90 +25,73 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-    load();
+    void load();
   }, []);
 
   const totalElections = elections.length;
   const activeElections = elections.filter((e) => e.status === 'ACTIVE');
   const totalVoters = users.length;
   const pendingUsers = users.filter((u) => u.status === 'PENDING');
+
   return (
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-bv-ink">Admin Dashboard</h1>
-          <p className="text-bv-ink-secondary text-sm mt-1">Overview of elections, voters, and platform activity</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <StatsCard icon={<Vote size={20} />} value={totalElections} label="Total Elections" />
-          <StatsCard
-            icon={<CheckCircle size={20} />}
-            value={activeElections.length}
-            label="Active Elections"
-          />
-          <StatsCard icon={<Users size={20} />} value={totalVoters} label="Total Voters" />
-          <StatsCard icon={<Clock size={20} />} value={pendingUsers.length} label="Pending Approvals" />
-        </div>
-
-        {/* Pending Voter Approvals */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-bv-ink">Pending Voter Approvals</h2>
-            <span className="bg-yellow-500/20 text-yellow-400 text-xs font-medium px-2.5 py-1 rounded-full">
-              {pendingUsers.length} pending
-            </span>
+      <main className="ml-56 flex-1 overflow-y-auto px-10 py-8">
+        <div className="mb-8 flex items-end justify-between border-b border-white/10 pb-5">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-bv-ink-muted">Admin Workspace</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-bv-ink">Dashboard</h1>
           </div>
-          <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
+          <p className="mt-1 text-sm text-bv-ink-secondary">
+            Review approvals and monitor active elections.
+          </p>
+        </div>
+
+        <div className="mb-8 grid grid-cols-3 gap-4">
+          <StatsCard icon={<CheckCircle size={20} />} value={activeElections.length} label="Active Elections" />
+          <StatsCard icon={<Clock size={20} />} value={pendingUsers.length} label="Pending Approvals" />
+          <StatsCard icon={<Users size={20} />} value={totalVoters} label="Total Voters" />
+        </div>
+
+        <section className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-bv-ink">Pending Voter Approvals</h2>
+            <Link to="/admin/voters" className="text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink">
+              Review all
+            </Link>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02]">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-bv-border">
+                <tr className="border-b border-white/8">
                   {['Name', 'Email', 'Wallet', 'Registered', 'Actions'].map((h) => (
                     <th
                       key={h}
-                      className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium"
+                      className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-bv-ink-muted"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-bv-border">
+              <tbody className="divide-y divide-white/8">
                 {pendingUsers.slice(0, 5).map((voter) => (
-                  <tr key={voter.id} className="bg-yellow-500/[0.02] hover:bg-yellow-500/[0.04] transition-colors">
-                    <td className="px-5 py-4 text-bv-ink text-sm font-medium">{voter.name}</td>
-                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">{voter.email}</td>
-                    <td className="px-5 py-4 text-bv-ink-secondary text-sm font-mono">
+                  <tr key={voter.id} className="transition-colors hover:bg-white/[0.03]">
+                    <td className="px-5 py-4 text-sm font-medium text-bv-ink">{voter.name}</td>
+                    <td className="px-5 py-4 text-sm text-bv-ink-secondary">{voter.email}</td>
+                    <td className="px-5 py-4 font-mono text-sm text-bv-ink-secondary">
                       {voter.walletAddress
                         ? `${voter.walletAddress.slice(0, 6)}...${voter.walletAddress.slice(-4)}`
-                        : '—'}
+                        : '-'}
                     </td>
-                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">
-                      {voter.createdAt
-                        ? new Date(voter.createdAt).toLocaleDateString()
-                        : '—'}
+                    <td className="px-5 py-4 text-sm text-bv-ink-secondary">
+                      {voter.createdAt ? new Date(voter.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => window.location.assign('/admin/voters')}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => window.location.assign('/admin/voters')}
-                        >
-                          Reject
-                        </Button>
-                      </div>
+                      <Link to="/admin/voters" className="text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink">
+                        Open queue
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -117,14 +100,18 @@ const AdminDashboard = () => {
           </div>
         </section>
 
-        {/* Active Elections */}
         <section>
-          <h2 className="text-lg font-bold text-bv-ink mb-4">Active Elections</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-bv-ink">Active Elections</h2>
+            <Link to="/admin/elections" className="text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink">
+              View all
+            </Link>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {loading ? (
-              <div className="col-span-2 text-bv-ink-muted text-sm">Loading elections...</div>
+              <div className="col-span-2 text-sm text-bv-ink-muted">Loading elections...</div>
             ) : activeElections.length === 0 ? (
-              <div className="col-span-2 text-bv-ink-muted text-sm">No active elections right now.</div>
+              <div className="col-span-2 text-sm text-bv-ink-muted">No active elections right now.</div>
             ) : (
               activeElections.slice(0, 4).map((election) => (
                 <ElectionCard
@@ -140,6 +127,10 @@ const AdminDashboard = () => {
                 />
               ))
             )}
+          </div>
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm text-bv-ink-secondary">
+            <span className="font-medium text-bv-ink">{totalElections}</span> total elections across all states.
+            Use the Elections page for filtering, schedule setup, and result review.
           </div>
         </section>
       </main>

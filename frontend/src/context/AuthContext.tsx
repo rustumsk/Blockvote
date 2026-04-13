@@ -12,7 +12,7 @@ type AuthContextValue = {
   loading: boolean
   login: (email: string, password: string) => Promise<User>
   loginWithWallet: (walletAddress: string, signature: string) => Promise<User>
-  register: (data: { name: string; email: string; password: string; phone?: string; walletAddress: string }) => Promise<void>
+  register: (data: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) => Promise<void>
   refreshUser: () => Promise<User | null>
   logout: () => void
   setUser: (user: User | null) => void
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return u
   }, [persistSession])
 
-  const register = useCallback(async (data: { name: string; email: string; password: string; phone?: string; walletAddress: string }) => {
+  const register = useCallback(async (data: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) => {
     await authApi.register(data)
   }, [])
 

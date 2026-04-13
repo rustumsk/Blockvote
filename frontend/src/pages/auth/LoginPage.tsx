@@ -20,7 +20,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (loading || !token || !user) return;
-    navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+    navigate(user.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard', { replace: true });
   }, [loading, token, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +34,7 @@ const LoginPage = () => {
     try {
       const currentUser = await login(email.trim(), password);
       notifySuccess('Signed in successfully.');
-      navigate(currentUser.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', {
+      navigate(currentUser.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard', {
         replace: true,
       });
     } catch (err) {
@@ -58,7 +58,7 @@ const LoginPage = () => {
 
       const currentUser = await loginWithWallet(walletAddress, signed.signature);
       notifySuccess('Signed in with MetaMask.');
-      navigate(currentUser.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', {
+      navigate(currentUser.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard', {
         replace: true,
       });
     } catch (err) {

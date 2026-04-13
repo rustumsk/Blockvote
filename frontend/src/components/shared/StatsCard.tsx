@@ -10,19 +10,19 @@ interface StatsCardProps {
 
 const StatsCard: React.FC<StatsCardProps> = ({ icon, value, label, trend, trendUp }) => {
   return (
-    <div className="bg-bv-surface border border-bv-border rounded-2xl p-5 hover:border-bv-accent/20 transition-all duration-150">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl bg-bv-accent-muted flex items-center justify-center text-bv-accent">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.015] p-5 transition-colors duration-150 hover:bg-white/[0.03]">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-bv-ink">
           {icon}
         </div>
         {trend && (
-          <span className={`text-xs font-medium ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-xs font-medium ${trendUp ? 'text-bv-ink-secondary' : 'text-bv-ink-muted'}`}>
             {trendUp ? '+' : '-'}{trend}
           </span>
         )}
       </div>
-      <div className="text-2xl font-bold text-bv-ink mb-0.5 tracking-tight">{value}</div>
-      <div className="text-bv-ink-muted text-xs font-medium">{label}</div>
+      <div className="mb-0.5 text-2xl font-semibold tracking-[-0.04em] text-bv-ink">{value}</div>
+      <div className="text-xs font-medium uppercase tracking-[0.18em] text-bv-ink-muted">{label}</div>
     </div>
   );
 };

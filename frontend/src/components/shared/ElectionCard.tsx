@@ -72,27 +72,27 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   }
 
   return (
-    <div className="group bg-bv-surface border border-bv-border rounded-2xl p-5 hover:border-bv-accent/25 transition-all duration-200 flex flex-col gap-3.5">
+    <div className="group flex flex-col gap-3.5 rounded-2xl border border-white/10 bg-white/[0.015] p-5 transition-colors duration-200 hover:bg-white/[0.03]">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-bv-ink font-semibold text-[15px] leading-snug group-hover:text-bv-accent transition-colors">
+        <h3 className="text-[15px] font-semibold leading-snug text-bv-ink transition-colors group-hover:text-white">
           {title}
         </h3>
         <Badge variant={status} />
       </div>
 
-      <p className="text-bv-ink-secondary text-[13px] leading-relaxed line-clamp-2">{description}</p>
+      <p className="line-clamp-2 text-[13px] leading-relaxed text-bv-ink-secondary">{description}</p>
 
       {countdownLabel && (
-        <div className="flex items-center gap-2 text-bv-accent text-xs font-mono">
-          <div className="w-1.5 h-1.5 rounded-full bg-bv-accent animate-pulse" />
+        <div className="flex items-center gap-2 font-mono text-xs text-bv-ink-secondary">
+          <div className="h-1.5 w-1.5 rounded-full bg-bv-ink-secondary animate-pulse" />
           {countdownLabel}
         </div>
       )}
 
-      <div className="flex items-center gap-5 text-bv-ink-muted text-xs">
+      <div className="flex items-center gap-5 text-xs text-bv-ink-muted">
         <span className="flex items-center gap-1.5">
           <Calendar size={13} />
-          {formatShort(startDate)} — {formatShort(endDate)}
+          {formatShort(startDate)} - {formatShort(endDate)}
         </span>
         <span className="flex items-center gap-1.5">
           <Users size={13} />
@@ -100,21 +100,21 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
         </span>
       </div>
 
-      <div className="mt-auto pt-1.5 border-t border-bv-border">
+      <div className="mt-auto border-t border-white/10 pt-2">
         {role === 'admin' ? (
           <Link to={`/admin/elections/${id}`} className="block">
-            <Button variant="ghost" size="sm" fullWidth>
+            <Button variant="ghost" size="sm" fullWidth className="border border-white/10 bg-white/[0.02] hover:bg-white/[0.08]">
               Manage
             </Button>
           </Link>
         ) : role === 'public' ? (
           <Link to={publicDetailHref} className="block">
-            <Button variant="ghost" size="sm" fullWidth>
+            <Button variant="ghost" size="sm" fullWidth className="border border-white/10 bg-white/[0.02] hover:bg-white/[0.08]">
               View Details
             </Button>
           </Link>
         ) : hasVoted ? (
-          <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm font-medium py-1.5">
+          <div className="flex items-center justify-center gap-2 py-1.5 text-sm font-medium text-bv-ink-secondary">
             <CheckCircle size={15} />
             <span>Voted</span>
           </div>
@@ -126,7 +126,7 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
           </Link>
         ) : (
           <Link to={voterDetailHref} className="block">
-            <Button variant="ghost" size="sm" fullWidth>
+            <Button variant="ghost" size="sm" fullWidth className="border border-white/10 bg-white/[0.02] hover:bg-white/[0.08]">
               View Details
             </Button>
           </Link>

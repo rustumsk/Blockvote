@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Wallet, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, Wallet, Shield, AlertTriangle, CheckCircle2, Building2 } from 'lucide-react';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -178,6 +178,14 @@ const ProfilePage = () => {
                   </div>
 
                   <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Organization</label>
+                    <div className="flex min-h-[50px] items-center gap-3 rounded-xl border border-bv-border bg-bv-bg px-4 py-3 text-sm text-bv-ink-secondary">
+                      <Building2 size={16} className="text-bv-ink-muted" />
+                      <span>{user.organization?.name ?? 'Not assigned'}</span>
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Wallet</label>
                     {user.walletAddress ? (
                       <div className="flex min-h-[50px] items-center gap-3 rounded-xl border border-bv-border bg-bv-bg px-4 py-3 font-mono text-sm text-bv-ink-secondary">
@@ -196,7 +204,7 @@ const ProfilePage = () => {
                 </div>
 
                 <div className="mt-6 flex justify-center md:justify-end">
-                  <Button type="submit" variant="primary" size="lg" disabled={saving}>
+                  <Button type="submit" variant="primary" size="lg" loading={saving}>
                     {saving ? 'Saving...' : 'Save changes'}
                   </Button>
                 </div>
@@ -238,6 +246,7 @@ const ProfilePage = () => {
               <Button
                 variant="danger"
                 onClick={handleDeleteAccount}
+                loading={deleting}
                 disabled={deleteConfirm !== 'DELETE' || deleting}
               >
                 {deleting ? 'Deleting...' : 'Delete my account'}

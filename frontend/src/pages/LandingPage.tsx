@@ -71,7 +71,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (loading || !token || !user) return;
-    navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard', { replace: true });
+    navigate(user.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard', { replace: true });
   }, [loading, token, user, navigate]);
 
   useEffect(() => {

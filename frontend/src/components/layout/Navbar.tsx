@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
   const { user, token, logout } = useAuth();
-  const dashboardHref = user?.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard';
+  const dashboardHref = user?.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard';
   const isAuthenticated = Boolean(token && user);
 
   return (

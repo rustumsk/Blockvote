@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, Eye, Edit, Pause, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Eye, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import { electionsApi, type ElectionListItem } from '../../api/client';
+import { electionsApi, organizationsApi, type ElectionListItem, type Organization } from '../../api/client';
 
 type FilterTab = 'all' | 'ACTIVE' | 'UPCOMING' | 'CLOSED';
 
@@ -33,28 +33,45 @@ function statusToVariant(s: string): 'active' | 'upcoming' | 'closed' {
 }
 
 const ManageElectionsPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showModal, setShowModal] = useState(false);
   const [elections, setElections] = useState<ElectionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStart, setFormStart] = useState('');
   const [formEnd, setFormEnd] = useState('');
+  const [formScope, setFormScope] = useState<'GLOBAL' | 'ORGANIZATION'>('GLOBAL');
+  const [formOrganizationId, setFormOrganizationId] = useState('');
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
     const status = activeTab === 'all' ? undefined : activeTab;
     setLoading(true);
     setError(null);
     electionsApi
-      .getList({ status })
+      .getManageList({ status })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, [activeTab]);
+
+  useEffect(() => {
+    organizationsApi
+      .list()
+      .then((items) => {
+        setOrganizations(items);
+        if (items.length > 0) setFormOrganizationId((current) => current || items[0].id);
+      })
+      .catch(() => {
+        // no-op for now, create flow will show backend errors
+      });
+  }, []);
 
   const filtered = elections.filter((e) => activeTab === 'all' || e.status === activeTab);
 
@@ -70,22 +87,28 @@ const ManageElectionsPage = () => {
       setCreateError('End date must be after start date.');
       return;
     }
+    if (formScope === 'ORGANIZATION' && !formOrganizationId) {
+      setCreateError('Select an organization for organization elections.');
+      return;
+    }
     setCreateLoading(true);
     setCreateError(null);
     try {
-      await electionsApi.create({
+      const created = await electionsApi.create({
         title: formTitle.trim(),
         description: formDescription.trim(),
         startDate: start.toISOString(),
         endDate: end.toISOString(),
+        scope: formScope,
+        organizationId: formScope === 'ORGANIZATION' ? formOrganizationId : undefined,
       });
       setShowModal(false);
       setFormTitle('');
       setFormDescription('');
       setFormStart('');
       setFormEnd('');
-      const list = await electionsApi.getList();
-      setElections(list);
+      setFormScope('GLOBAL');
+      navigate(`/admin/elections/${created.id}`);
     } catch (err) {
       setCreateError((err as Error).message);
     } finally {
@@ -95,11 +118,14 @@ const ManageElectionsPage = () => {
 
   const handleDeleteElection = async (id: string, title: string) => {
     if (!window.confirm(`Delete election "${title}"? This cannot be undone.`)) return;
+    setDeleteLoadingId(id);
     try {
       await electionsApi.delete(id);
       setElections((prev) => prev.filter((e) => e.id !== id));
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setDeleteLoadingId(null);
     }
   };
 
@@ -107,12 +133,13 @@ const ManageElectionsPage = () => {
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 overflow-y-auto px-10 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-8 flex items-end justify-between border-b border-white/10 pb-5">
           <div>
-            <h1 className="text-2xl font-bold text-bv-ink">Manage Elections</h1>
-            <p className="text-bv-ink-secondary text-sm mt-1">Create, edit, and monitor all elections</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-bv-ink-muted">Election Workflow</p>
+            <h1 className="mt-1 text-2xl font-semibold text-bv-ink">Manage Elections</h1>
+            <p className="mt-1 text-sm text-bv-ink-secondary">Create elections, then finish setup in the detail page.</p>
           </div>
           <Button variant="primary" onClick={() => setShowModal(true)}>
             <Plus size={16} />
@@ -121,13 +148,13 @@ const ManageElectionsPage = () => {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-bv-surface border border-bv-border rounded-xl p-1 w-fit">
+        <div className="mb-6 flex w-fit items-center gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === tab.key ? 'bg-bv-accent text-bv-bg' : 'text-bv-ink-secondary hover:text-bv-ink'
+                activeTab === tab.key ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'
               }`}
             >
               {tab.label}
@@ -144,39 +171,38 @@ const ManageElectionsPage = () => {
         {loading ? (
           <div className="text-center py-16 text-bv-ink-muted">Loading elections...</div>
         ) : (
-          <div className="bg-bv-surface border border-bv-border rounded-xl overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-bv-border">
-                  {['Title', 'Status', 'Start Date', 'End Date', 'Candidates', 'Actions'].map((h) => (
+                <tr className="border-b border-white/10">
+                  {['Title', 'Scope', 'Status', 'Start Date', 'End Date', 'Candidates', 'Actions'].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-bv-border">
+              <tbody className="divide-y divide-white/10">
                 {filtered.map((el) => (
-                  <tr key={el.id} className="hover:bg-bv-surface-hover/50 transition-colors">
+                  <tr key={el.id} className="transition-colors hover:bg-white/[0.04]">
                     <td className="px-5 py-4 text-bv-ink text-sm font-medium">{el.title}</td>
+                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">
+                      {el.scope === 'GLOBAL' ? 'Global' : el.organization?.name ?? 'Organization'}
+                    </td>
                     <td className="px-5 py-4"><Badge variant={statusToVariant(el.status)} /></td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.startDate)}</td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.endDate)}</td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{el.candidateCount}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <Link to={`/admin/elections/${el.id}`} className="p-1.5 text-bv-ink-secondary hover:text-bv-ink rounded hover:bg-bv-surface-hover transition-colors">
+                        <Link to={`/admin/elections/${el.id}`} className="rounded p-1.5 text-bv-ink-secondary transition-colors hover:bg-white/[0.06] hover:text-bv-ink">
                           <Eye size={15} />
                         </Link>
-                        <button className="p-1.5 text-bv-ink-secondary hover:text-bv-accent rounded hover:bg-bv-surface-hover transition-colors">
-                          <Edit size={15} />
-                        </button>
-                        <button className="p-1.5 text-bv-ink-secondary hover:text-yellow-400 rounded hover:bg-bv-surface-hover transition-colors">
-                          <Pause size={15} />
-                        </button>
                         <button
-                          className="p-1.5 text-bv-ink-secondary hover:text-red-400 rounded hover:bg-bv-surface-hover transition-colors"
+                          disabled={deleteLoadingId === el.id}
+                          className="rounded p-1.5 text-bv-ink-secondary transition-colors hover:bg-white/[0.06] hover:text-red-300"
                           onClick={() => handleDeleteElection(el.id, el.title)}
+                          title={deleteLoadingId === el.id ? 'Deleting election...' : 'Delete election'}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -229,13 +255,43 @@ const ManageElectionsPage = () => {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Scope</label>
+                <select
+                  value={formScope}
+                  onChange={(e) => setFormScope(e.target.value as 'GLOBAL' | 'ORGANIZATION')}
+                  className="w-full rounded-lg border border-bv-border bg-bv-bg px-4 py-3 text-bv-ink"
+                >
+                  <option value="GLOBAL">Global</option>
+                  <option value="ORGANIZATION">Organization</option>
+                </select>
+              </div>
+              {formScope === 'ORGANIZATION' && (
+                <div>
+                  <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Organization</label>
+                  <select
+                    value={formOrganizationId}
+                    onChange={(e) => setFormOrganizationId(e.target.value)}
+                    className="w-full rounded-lg border border-bv-border bg-bv-bg px-4 py-3 text-bv-ink"
+                  >
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             {createError && (
               <p className="text-red-400 text-sm">{createError}</p>
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" variant="primary" fullWidth disabled={createLoading}>
-                {createLoading ? 'Creating...' : 'Create Election'}
+              <Button type="submit" variant="primary" fullWidth loading={createLoading}>
+                {createLoading ? 'Creating election...' : 'Create and Continue'}
               </Button>
               <Button type="button" variant="outline" fullWidth onClick={() => setShowModal(false)} disabled={createLoading}>
                 Cancel

@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 type RequireRoleProps = {
-  role: 'ADMIN' | 'VOTER';
+  role: 'ADMIN' | 'VOTER' | 'SUPERADMIN';
 };
 
 const loadingShell = (
@@ -21,10 +21,15 @@ export default function RequireRole({ role }: RequireRoleProps) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (user.role !== role) {
+  const allowed =
+    role === 'ADMIN'
+      ? user.role === 'ADMIN' || user.role === 'SUPERADMIN'
+      : user.role === role;
+
+  if (!allowed) {
     return (
       <Navigate
-        to={user.role === 'ADMIN' ? '/admin/dashboard' : '/voter/dashboard'}
+        to={user.role === 'VOTER' ? '/voter/dashboard' : '/admin/dashboard'}
         replace
       />
     );

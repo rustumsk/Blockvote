@@ -11,7 +11,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi, type WalletRegistrationStatus } from '../../api/client';
+import { authApi, organizationsApi, type Organization, type WalletRegistrationStatus } from '../../api/client';
 import { AuthShell, AuthStatusScreen } from '../../components/auth/AuthShell';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -33,6 +33,8 @@ const RegisterPage = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(() => getPendingWallet());
@@ -44,6 +46,16 @@ const RegisterPage = () => {
 
   useEffect(() => {
     setWalletAddress(getPendingWallet());
+  }, []);
+
+  useEffect(() => {
+    organizationsApi
+      .list()
+      .then((items) => {
+        setOrganizations(items);
+        if (items.length > 0) setOrganizationId((current) => current || items[0].id);
+      })
+      .catch((error) => notifyError(error instanceof Error ? error.message : 'Failed to load organizations'));
   }, []);
 
   useEffect(() => {
@@ -124,6 +136,10 @@ const RegisterPage = () => {
       notifyError('Connect your wallet before registering.');
       return;
     }
+    if (!organizationId) {
+      notifyError('Please choose your organization.');
+      return;
+    }
     if (!agreed) {
       notifyError('Please agree to the terms before continuing.');
       return;
@@ -141,6 +157,7 @@ const RegisterPage = () => {
         password,
         phone: phone.trim() || undefined,
         walletAddress,
+        organizationId,
       });
       clearPendingWallet();
       setSuccess(true);
@@ -309,6 +326,21 @@ const RegisterPage = () => {
               onChange={(e) => setPhone(e.target.value)}
               autoComplete="tel"
             />
+            <div>
+              <label className="mb-1.5 block text-xs uppercase tracking-wide text-bv-ink-muted">Organization</label>
+              <select
+                value={organizationId}
+                onChange={(e) => setOrganizationId(e.target.value)}
+                className="w-full rounded-lg border border-bv-border bg-bv-surface px-4 py-3 text-sm text-bv-ink focus:border-bv-accent focus:outline-none"
+              >
+                {organizations.length === 0 && <option value="">No organizations available</option>}
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <Input
               label="Password"
               type={showPassword ? 'text' : 'password'}

@@ -50,7 +50,7 @@ const CandidateProfilePage = () => {
 
   const electionLink =
     token && user
-      ? user.role === 'ADMIN'
+      ? user.role !== 'VOTER'
         ? `/admin/elections/${election?.id ?? ''}`
         : `/voter/elections/${election?.id ?? ''}`
       : '/elections';

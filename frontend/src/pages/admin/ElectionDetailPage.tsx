@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio } from 'lucide-react';
+import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio, CheckCircle2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Badge from '../../components/ui/Badge';
@@ -44,6 +44,7 @@ const ElectionDetailPage = () => {
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [publishingResults, setPublishingResults] = useState(false);
+  const [syncingContract, setSyncingContract] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -165,11 +166,26 @@ const ElectionDetailPage = () => {
     }
   };
 
+  const handleSyncContractIds = async () => {
+    if (!id) return;
+    setSyncingContract(true);
+    try {
+      const result = await electionsApi.syncContractIds(id);
+      const refreshed = await electionsApi.getById(id);
+      setElection(refreshed);
+      notifySuccess(`Sync complete: ${result.syncedCandidates} candidate IDs linked.`);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'Failed to sync contract IDs');
+    } finally {
+      setSyncingContract(false);
+    }
+  };
+
   if (!id) {
     return (
       <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
-        <main className="ml-12 flex-1 p-8">
+        <main className="ml-56 flex-1 p-8">
           <p className="text-bv-ink-secondary">Invalid election ID.</p>
         </main>
       </div>
@@ -180,7 +196,7 @@ const ElectionDetailPage = () => {
     return (
       <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
-        <main className="ml-12 flex-1 p-8">
+        <main className="ml-56 flex-1 p-8">
           <p className="text-bv-ink-muted">Loading election...</p>
         </main>
       </div>
@@ -191,7 +207,7 @@ const ElectionDetailPage = () => {
     return (
       <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
-        <main className="ml-12 flex-1 p-8">
+        <main className="ml-56 flex-1 p-8">
           <p className="text-red-400">{error || 'Election not found.'}</p>
           <Link to="/admin/elections" className="text-bv-accent hover:underline mt-2 inline-block">
             Back to elections
@@ -203,18 +219,28 @@ const ElectionDetailPage = () => {
 
   const isUpcoming = election.status === 'UPCOMING';
   const isClosed = election.status === 'CLOSED';
+  const canAddCandidates = isUpcoming;
   const totalVotes = results?.totalVotes ?? 0;
   const turnout = results?.statistics.turnoutPercentage ?? 0;
   const approvedVoters = results?.statistics.approvedVoterCount ?? 0;
   const isPublished = results?.published ?? election.resultsPublished ?? false;
   const publishedAt = results?.publishedAt ?? election.resultsPublishedAt ?? null;
   const winnerName = results?.winner?.name ?? 'No winner yet';
+  const hasMinimumCandidates = (election.candidates?.length ?? 0) >= 2;
+  const unsyncedCandidatesCount = election.candidates.filter((c) => c.contractCandidateId == null).length;
+  const isElectionUnsynced = election.contractElectionId == null || unsyncedCandidatesCount > 0;
+  const setupSteps = [
+    { label: 'Election details created', done: true },
+    { label: 'At least 2 candidates added', done: hasMinimumCandidates },
+    { label: 'Election is scheduled (upcoming)', done: isUpcoming || election.status === 'ACTIVE' },
+    { label: 'Ready to publish after close', done: isClosed },
+  ];
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 overflow-y-auto px-10 py-8">
         <div className="flex items-center gap-4 mb-8">
           <Link
             to="/admin/elections"
@@ -223,18 +249,53 @@ const ElectionDetailPage = () => {
             <ArrowLeft size={16} />
             Back
           </Link>
-          <div className="h-4 w-px bg-bv-border" />
+          <div className="h-4 w-px bg-white/15" />
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-bv-ink">{election.title}</h1>
+            <h1 className="text-2xl font-semibold text-bv-ink">{election.title}</h1>
             <Badge variant={statusToVariant(election.status)} />
           </div>
         </div>
 
-        <p className="text-bv-ink-secondary text-sm mb-6 max-w-2xl">{election.description}</p>
+        <p className="mb-6 max-w-2xl text-sm text-bv-ink-secondary">{election.description}</p>
         <div className="flex items-center gap-4 text-bv-ink-muted text-sm mb-8">
           <span>Start: {formatDate(election.startDate)}</span>
           <span>End: {formatDate(election.endDate)}</span>
         </div>
+
+        {isElectionUnsynced && (
+          <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <p className="text-sm text-bv-ink-secondary">
+              This election is not fully synced to contract IDs yet.
+              {election.contractElectionId == null ? ' Election ID missing.' : ''}{' '}
+              {unsyncedCandidatesCount > 0 ? `${unsyncedCandidatesCount} candidate ID(s) missing.` : ''}
+            </p>
+            <div className="mt-3">
+              <Button variant="outline" size="sm" onClick={handleSyncContractIds} loading={syncingContract}>
+                {syncingContract ? 'Syncing...' : 'Re-sync Contract IDs'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <section className="mb-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-bv-ink-muted">Setup Progress</p>
+              <h2 className="mt-1 text-base font-semibold text-bv-ink">Election readiness checklist</h2>
+            </div>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-bv-ink-secondary">
+              {setupSteps.filter((step) => step.done).length}/{setupSteps.length} complete
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {setupSteps.map((step) => (
+              <div key={step.label} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                <CheckCircle2 size={15} className={step.done ? 'text-white' : 'text-bv-ink-muted'} />
+                <span className={step.done ? 'text-sm text-bv-ink' : 'text-sm text-bv-ink-secondary'}>{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[
@@ -243,19 +304,19 @@ const ElectionDetailPage = () => {
             { icon: Users, label: 'Approved Voters', value: String(approvedVoters) },
             { icon: Trophy, label: 'Turnout', value: `${turnout}%` },
           ].map((card) => (
-            <div key={card.label} className="bg-bv-surface border border-bv-border rounded-xl p-5">
+            <div key={card.label} className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-3">
-                <card.icon size={16} className="text-bv-accent" />
+                <card.icon size={16} className="text-bv-ink-secondary" />
                 <span className="text-bv-ink-muted text-xs uppercase tracking-wide">{card.label}</span>
               </div>
-              <div className="text-2xl font-bold text-bv-ink">{card.value}</div>
+              <div className="text-2xl font-semibold text-bv-ink">{card.value}</div>
             </div>
           ))}
         </div>
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-bv-ink">Candidates</h2>
-          {isUpcoming && (
+          {canAddCandidates && (
             <Button variant="primary" size="sm" onClick={() => setShowAddCandidate(true)}>
               <Plus size={16} />
               Add candidate
@@ -263,22 +324,26 @@ const ElectionDetailPage = () => {
           )}
         </div>
 
-        <div className="bg-bv-surface border border-bv-border rounded-xl p-6 mb-6">
+        {!canAddCandidates && (
+          <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-bv-ink-secondary">
+            Candidate editing is locked once the election is no longer upcoming.
+          </div>
+        )}
+
+        <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.02] p-6">
           {!election.candidates?.length ? (
             <p className="text-bv-ink-muted">
-              No candidates yet.{' '}
-              {isUpcoming && 'Click "Add candidate" to add candidates before the election starts.'}
+              No candidates yet. {canAddCandidates && 'Click "Add candidate" to complete setup before voting opens.'}
             </p>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {election.candidates.map((c: Candidate, idx: number) => (
                 <div
                   key={c.id}
-                  className="relative overflow-hidden rounded-2xl border border-bv-border bg-bv-bg/70 p-4 transition-colors hover:border-bv-accent/25"
+                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4 transition-colors hover:bg-white/[0.03]"
                 >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bv-accent/40 to-transparent" />
                   <div className="flex items-start gap-4">
-                    <div className="h-20 w-20 overflow-hidden rounded-2xl border border-bv-border bg-bv-surface-hover flex items-center justify-center flex-shrink-0">
+                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                       {c.photoUrl ? (
                         <img
                           src={getCandidatePhotoSrc(c) ?? undefined}
@@ -291,13 +356,13 @@ const ElectionDetailPage = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-bv-accent-muted text-[11px] font-semibold text-bv-accent">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-bv-ink">
                           {idx + 1}
                         </span>
                         <span className="text-bv-ink text-sm font-semibold">{c.name}</span>
                       </div>
                       {c.credentials && (
-                        <p className="mt-1 text-bv-accent text-xs font-medium uppercase tracking-[0.18em]">
+                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-bv-ink-secondary">
                           {c.credentials}
                         </p>
                       )}
@@ -315,10 +380,14 @@ const ElectionDetailPage = () => {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline">Edit Election</Button>
-          <Button variant="danger">Pause Election</Button>
+          <Button variant="outline" disabled>
+            Edit Election (coming soon)
+          </Button>
+          <Button variant="outline" disabled>
+            Pause Election (coming soon)
+          </Button>
           {isClosed && !isPublished && (
-            <Button variant="primary" onClick={handlePublishResults} disabled={publishingResults}>
+            <Button variant="primary" onClick={handlePublishResults} loading={publishingResults}>
               {publishingResults ? 'Publishing...' : 'Publish Official Results'}
             </Button>
           )}
@@ -328,12 +397,12 @@ const ElectionDetailPage = () => {
         <section className="mt-8">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-bv-ink">Live Results</h2>
-            <span className="inline-flex items-center gap-2 rounded-full border border-bv-accent/20 bg-bv-accent/5 px-3 py-1 text-xs font-medium text-bv-accent">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-bv-ink-secondary">
               <Radio size={12} />
               Live tally stays visible
             </span>
           </div>
-          <div className="bg-bv-surface border border-bv-border rounded-xl p-6">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
             <ResultsChart
               candidates={results?.candidates ?? []}
               winner={results?.winner ?? null}
@@ -347,19 +416,19 @@ const ElectionDetailPage = () => {
 
         <section className="mt-8">
           <h2 className="text-lg font-bold text-bv-ink mb-3">Official Published Result</h2>
-          <div className="rounded-xl border border-bv-border bg-bv-surface p-6">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
             {isPublished ? (
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bv-accent">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bv-ink-secondary">
                     Official winner
                   </p>
-                  <p className="mt-3 text-2xl font-bold text-bv-ink">{winnerName}</p>
+                  <p className="mt-3 text-2xl font-semibold text-bv-ink">{winnerName}</p>
                   <p className="mt-2 text-sm text-bv-ink-secondary">
                     Published {publishedAt ? new Date(publishedAt).toLocaleString() : 'just now'}.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-bv-border bg-bv-bg px-5 py-4">
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
                   <p className="text-xs uppercase tracking-wide text-bv-ink-muted">Recorded votes</p>
                   <p className="mt-2 text-xl font-semibold text-bv-ink">{totalVotes}</p>
                 </div>
@@ -453,7 +522,7 @@ const ElectionDetailPage = () => {
             </div>
             {addError && <p className="text-red-400 text-sm">{addError}</p>}
             <div className="flex gap-3 pt-2">
-              <Button type="submit" variant="primary" fullWidth disabled={addLoading}>
+              <Button type="submit" variant="primary" fullWidth loading={addLoading}>
                 {addLoading ? 'Adding...' : 'Add candidate'}
               </Button>
               <Button

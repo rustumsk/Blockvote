@@ -4,13 +4,22 @@ export type User = {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'VOTER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'VOTER'
   status: string
   walletAddress?: string | null
   phone?: string | null
   isVerified?: boolean
+  canCreateGlobalElections?: boolean
   createdAt?: string
   updatedAt?: string
+  organizationId?: string | null
+  organization?: { id: string; name: string } | null
+}
+
+export type Organization = {
+  id: string
+  name: string
+  createdAt?: string
 }
 
 export type WalletRegistrationStatus = {
@@ -46,7 +55,7 @@ export async function api<T>(
 }
 
 export const authApi = {
-  register(body: { name: string; email: string; password: string; phone?: string; walletAddress: string }) {
+  register(body: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) {
     return api<{ message: string }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -157,6 +166,17 @@ export const usersApi = {
       token: getToken(),
     })
   },
+
+  assignRoleScope(
+    id: string,
+    body: { role: 'ADMIN' | 'VOTER'; organizationId?: string; canCreateGlobalElections?: boolean }
+  ) {
+    return api<{ message: string }>(`/api/users/${id}/role-scope`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
 }
 
 export type ElectionStatus = 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
@@ -165,6 +185,9 @@ export type ElectionListItem = {
   id: string
   title: string
   description: string
+  scope: 'GLOBAL' | 'ORGANIZATION'
+  organizationId?: string | null
+  organization?: { id: string; name: string } | null
   startDate: string
   endDate: string
   status: ElectionStatus
@@ -210,18 +233,33 @@ export type ElectionResults = {
 }
 
 export const electionsApi = {
-  getList(params?: { status?: string }) {
+  getList(params?: { status?: string; scope?: 'GLOBAL' | 'ORGANIZATION' }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    if (params?.scope) sp.set('scope', params.scope)
+    const qs = sp.toString()
+    return api<ElectionListItem[]>(`/api/elections${qs ? `?${qs}` : ''}`)
+  },
+
+  getMyList(params?: { status?: string }) {
     const sp = new URLSearchParams()
     if (params?.status) sp.set('status', params.status)
     const qs = sp.toString()
-    return api<ElectionListItem[]>(`/api/elections${qs ? `?${qs}` : ''}`)
+    return api<ElectionListItem[]>(`/api/elections/mine${qs ? `?${qs}` : ''}`, { token: getToken() })
+  },
+
+  getManageList(params?: { status?: string }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    const qs = sp.toString()
+    return api<ElectionListItem[]>(`/api/elections/manage${qs ? `?${qs}` : ''}`, { token: getToken() })
   },
 
   getById(id: string) {
     return api<ElectionDetail>(`/api/elections/${id}`)
   },
 
-  create(body: { title: string; description: string; startDate: string; endDate: string }) {
+  create(body: { title: string; description: string; startDate: string; endDate: string; scope?: 'GLOBAL' | 'ORGANIZATION'; organizationId?: string }) {
     return api<ElectionListItem & { candidateCount: number }>('/api/elections', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -232,6 +270,26 @@ export const electionsApi = {
   delete(id: string) {
     return api<{ message: string }>(`/api/elections/${id}`, {
       method: 'DELETE',
+      token: getToken(),
+    })
+  },
+
+  syncContractIds(id: string) {
+    return api<{ message: string; contractElectionId: number; syncedCandidates: number }>(`/api/elections/${id}/sync-contract`, {
+      method: 'POST',
+      token: getToken(),
+    })
+  },
+}
+
+export const organizationsApi = {
+  list() {
+    return api<Organization[]>('/api/organizations')
+  },
+  create(name: string) {
+    return api<Organization>('/api/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
       token: getToken(),
     })
   },

@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom'
 import Sidebar from '../../components/layout/Sidebar'
 import ElectionCard from '../../components/shared/ElectionCard'
 import { electionsApi, type ElectionListItem } from '../../api/client'
+import { useAuth } from '../../context/AuthContext'
 
 type FilterTab = 'all' | 'ACTIVE' | 'UPCOMING' | 'CLOSED'
+type ScopeTab = 'all' | 'GLOBAL' | 'ORGANIZATION'
 
 const tabs: { key: FilterTab; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -22,7 +24,9 @@ function statusToVariant(s: string): 'active' | 'upcoming' | 'closed' {
 }
 
 const ElectionsPage = () => {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
+  const [scopeTab, setScopeTab] = useState<ScopeTab>('all')
   const [search, setSearch] = useState('')
   const [elections, setElections] = useState<ElectionListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,21 +37,24 @@ const ElectionsPage = () => {
     setLoading(true)
     setError(null)
     electionsApi
-      .getList({ status })
+      .getMyList({ status })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false))
   }, [activeTab])
 
-  const filtered = elections.filter((e) =>
-    e.title.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = elections.filter((e) => {
+    const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase())
+    if (!matchesSearch) return false
+    if (scopeTab === 'all') return true
+    return e.scope === scopeTab
+  })
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="voter" />
 
-      <main className="ml-12 flex-1 p-8 overflow-y-auto">
+      <main className="ml-56 flex-1 p-8 overflow-y-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-bv-ink">Elections</h1>
@@ -92,6 +99,30 @@ const ElectionsPage = () => {
               {tab.label}
             </button>
           ))}
+        </div>
+
+        <div className="mb-6 flex items-center gap-2">
+          <button
+            onClick={() => setScopeTab('all')}
+            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'all' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+          >
+            All scopes
+          </button>
+          <button
+            onClick={() => setScopeTab('ORGANIZATION')}
+            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'ORGANIZATION' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+          >
+            My organization
+          </button>
+          <button
+            onClick={() => setScopeTab('GLOBAL')}
+            className={`rounded-lg px-4 py-2 text-sm ${scopeTab === 'GLOBAL' ? 'bg-white text-black' : 'text-bv-ink-secondary hover:text-bv-ink'}`}
+          >
+            Global
+          </button>
+          <span className="ml-2 text-xs text-bv-ink-muted">
+            {user?.organization?.name ? `Org: ${user.organization.name}` : ''}
+          </span>
         </div>
 
         {loading ? (
