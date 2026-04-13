@@ -5,11 +5,11 @@ import { authService } from './auth.service'
 export const authController = {
   async register(req: AuthRequest, res: Response) {
     try {
-      const { name, email, password, phone, walletAddress } = req.body
-      if (!name || !email || !password || !walletAddress) {
-        return res.status(400).json({ message: 'Name, email, password and walletAddress are required' })
+      const { name, email, password, phone, walletAddress, organizationId } = req.body
+      if (!name || !email || !password || !walletAddress || !organizationId) {
+        return res.status(400).json({ message: 'Name, email, password, walletAddress and organizationId are required' })
       }
-      const data = await authService.register({ name, email, password, phone, walletAddress })
+      const data = await authService.register({ name, email, password, phone, walletAddress, organizationId })
       return res.status(201).json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed'
@@ -17,6 +17,8 @@ export const authController = {
       const status =
         message === 'Email already registered' || message === 'Wallet already registered'
           ? 409
+          : message === 'Organization not found'
+            ? 400
           : invalidAddress
             ? 400
             : 400

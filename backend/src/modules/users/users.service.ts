@@ -8,6 +8,9 @@ const userListSelect = {
   phone: true,
   role: true,
   status: true,
+  organizationId: true,
+  organization: { select: { id: true, name: true } },
+  canCreateGlobalElections: true,
   walletAddress: true,
   isVerified: true,
   createdAt: true,
@@ -15,7 +18,7 @@ const userListSelect = {
 }
 
 type UserListWhere = {
-  role?: 'ADMIN' | 'VOTER'
+  role?: 'SUPERADMIN' | 'ADMIN' | 'VOTER'
   status?: 'PENDING' | 'APPROVED' | 'REJECTED'
   OR?: Array<{
     name?: { contains: string; mode: 'insensitive' }
@@ -42,13 +45,41 @@ async function isWalletApprovedOnChain(walletAddress: string) {
   }
 }
 
+async function ensureCanManageUser(actorId: string, targetUserId: string) {
+  const [actor, target] = await Promise.all([
+    prisma.user.findUnique({ where: { id: actorId }, select: { role: true, organizationId: true } }),
+    prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, role: true, organizationId: true, walletAddress: true, status: true },
+    }),
+  ])
+  if (!actor) throw new Error('User not found')
+  if (!target) throw new Error('User not found')
+  if (actor.role === 'SUPERADMIN') return target
+  if (actor.role !== 'ADMIN') throw new Error('Admin access required')
+  if (target.role !== 'VOTER') throw new Error('Only voter accounts can be managed by admins')
+  if (!actor.organizationId || target.organizationId !== actor.organizationId) {
+    throw new Error('You can only manage users in your organization')
+  }
+  return target
+}
+
 export const usersService = {
-  async getUsers(query: { status?: string; search?: string; page?: number; limit?: number }) {
+  async getUsers(actorId: string, query: { status?: string; search?: string; page?: number; limit?: number }) {
     const page = Math.max(1, query.page ?? 1)
     const limit = Math.min(100, Math.max(1, query.limit ?? 50))
     const skip = (page - 1) * limit
 
-    const where: UserListWhere = { role: 'VOTER' }
+    const actor = await prisma.user.findUnique({
+      where: { id: actorId },
+      select: { role: true, organizationId: true },
+    })
+    if (!actor) throw new Error('User not found')
+
+    const where: UserListWhere = {}
+    if (actor.role === 'ADMIN') {
+      where.role = 'VOTER'
+    }
     if (query.status && ['PENDING', 'APPROVED', 'REJECTED'].includes(query.status)) {
       where.status = query.status as 'PENDING' | 'APPROVED' | 'REJECTED'
     }
@@ -62,7 +93,12 @@ export const usersService = {
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
-        where,
+        where: actor.role === 'SUPERADMIN'
+          ? { ...where, NOT: { role: 'SUPERADMIN' } }
+          : {
+              ...where,
+              organizationId: actor.organizationId ?? undefined,
+            },
         select: userListSelect,
         orderBy: { createdAt: 'desc' },
         skip,
@@ -93,9 +129,8 @@ export const usersService = {
     return { message: 'User deleted successfully' }
   },
 
-  async approveUser(userId: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) throw new Error('User not found')
+  async approveUser(actorId: string, userId: string) {
+    const user = await ensureCanManageUser(actorId, userId)
     if (user.role !== 'VOTER') throw new Error('Only voter accounts can be approved')
     if (!user.walletAddress) throw new Error('Voter must link a wallet before approval')
 
@@ -115,9 +150,8 @@ export const usersService = {
     return { message: 'Voter approved' }
   },
 
-  async rejectUser(userId: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) throw new Error('User not found')
+  async rejectUser(actorId: string, userId: string) {
+    const user = await ensureCanManageUser(actorId, userId)
     if (user.role !== 'VOTER') throw new Error('Only voter accounts can be rejected')
 
     if (user.status === 'APPROVED' && user.walletAddress) {
@@ -138,9 +172,8 @@ export const usersService = {
     return { message: 'Voter rejected' }
   },
 
-  async revokeUser(userId: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) throw new Error('User not found')
+  async revokeUser(actorId: string, userId: string) {
+    const user = await ensureCanManageUser(actorId, userId)
     if (user.role !== 'VOTER') throw new Error('Only voter accounts can be revoked')
 
     if (user.walletAddress) {
@@ -159,5 +192,42 @@ export const usersService = {
       data: { status: 'PENDING' },
     })
     return { message: 'Voter revoked' }
+  },
+
+  async assignAdminScope(
+    actorId: string,
+    targetUserId: string,
+    input: { role: 'ADMIN' | 'VOTER'; organizationId?: string | null; canCreateGlobalElections?: boolean }
+  ) {
+    const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { role: true } })
+    if (!actor || actor.role !== 'SUPERADMIN') throw new Error('Superadmin access required')
+
+    const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, role: true } })
+    if (!target) throw new Error('User not found')
+    if (target.role === 'SUPERADMIN') throw new Error('Cannot modify superadmin role')
+
+    if (input.role === 'ADMIN') {
+      if (!input.organizationId) throw new Error('organizationId is required for admin role')
+      const org = await prisma.organization.findUnique({ where: { id: input.organizationId }, select: { id: true } })
+      if (!org) throw new Error('Organization not found')
+      await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          role: 'ADMIN',
+          organizationId: input.organizationId,
+          canCreateGlobalElections: Boolean(input.canCreateGlobalElections),
+        },
+      })
+      return { message: 'User promoted to admin with scoped permissions' }
+    }
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        role: 'VOTER',
+        canCreateGlobalElections: false,
+      },
+    })
+    return { message: 'User role set to voter' }
   },
 }

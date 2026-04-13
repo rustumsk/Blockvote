@@ -16,10 +16,15 @@ const profileSelect = {
   phone: true,
   role: true,
   status: true,
+  canCreateGlobalElections: true,
   walletAddress: true,
   isVerified: true,
   createdAt: true,
   updatedAt: true,
+  organizationId: true,
+  organization: {
+    select: { id: true, name: true },
+  },
 }
 
 function normalizeWalletAddress(walletAddress: string) {
@@ -67,7 +72,7 @@ async function isWalletApprovedOnChain(walletAddress: string) {
 }
 
 export const authService = {
-  async register(data: { name: string; email: string; password: string; phone?: string; walletAddress: string }) {
+  async register(data: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) {
     const existing = await prisma.user.findUnique({ where: { email: data.email } })
     if (existing) throw new Error('Email already registered')
 
@@ -77,6 +82,11 @@ export const authService = {
       select: { id: true },
     })
     if (existingWalletOwner) throw new Error('Wallet already registered')
+    const organization = await prisma.organization.findUnique({
+      where: { id: data.organizationId },
+      select: { id: true },
+    })
+    if (!organization) throw new Error('Organization not found')
 
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS)
     const verifyToken = crypto.randomUUID()
@@ -89,6 +99,7 @@ export const authService = {
         phone: data.phone ?? null,
         role: 'VOTER',
         status: 'PENDING',
+        organizationId: data.organizationId,
         walletAddress: normalizedWalletAddress,
         isVerified: false,
         verifyToken,
@@ -119,7 +130,10 @@ export const authService = {
   },
 
   async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { organization: { select: { id: true, name: true } } },
+    })
     if (!user) throw new Error('Invalid email or password')
 
     const match = await bcrypt.compare(password, user.password)
@@ -136,6 +150,9 @@ export const authService = {
         email: user.email,
         role: user.role,
         status: user.status,
+        organizationId: user.organizationId,
+        organization: user.organization,
+        canCreateGlobalElections: user.canCreateGlobalElections,
         walletAddress: user.walletAddress,
       },
     }
@@ -193,7 +210,10 @@ export const authService = {
 
   async loginWithWallet(walletAddress: string, signature: string) {
     const normalizedWalletAddress = normalizeWalletAddress(walletAddress)
-    const user = await prisma.user.findUnique({ where: { walletAddress: normalizedWalletAddress } })
+    const user = await prisma.user.findUnique({
+      where: { walletAddress: normalizedWalletAddress },
+      include: { organization: { select: { id: true, name: true } } },
+    })
     if (!user) throw new Error('No account is linked to this wallet')
     if (!user.isVerified) throw new Error('Please verify your email before logging in')
 
@@ -220,6 +240,9 @@ export const authService = {
         email: user.email,
         role: user.role,
         status: user.status,
+        organizationId: user.organizationId,
+        organization: user.organization,
+        canCreateGlobalElections: user.canCreateGlobalElections,
         walletAddress: user.walletAddress,
       },
     }

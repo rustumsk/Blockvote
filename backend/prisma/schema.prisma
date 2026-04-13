@@ -7,46 +7,61 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
-  email         String    @unique
+  email         String   @unique
   password      String
   phone         String?
-  role          Role      @default(VOTER)
-  status        Status    @default(PENDING)
-  walletAddress String?   @unique
-  isVerified    Boolean   @default(false)
+  role          Role     @default(VOTER)
+  status        Status   @default(PENDING)
+  organizationId String?
+  canCreateGlobalElections Boolean @default(false)
+  walletAddress String?  @unique
+  isVerified    Boolean  @default(false)
   verifyToken   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  organization  Organization? @relation(fields: [organizationId], references: [id])
   votes         Vote[]
 }
 
 model Election {
-  id                 String          @id @default(uuid())
+  id                 String         @id @default(uuid())
   title              String
   description        String
+  scope              ElectionScope  @default(GLOBAL)
+  organizationId     String?
   startDate          DateTime
   endDate            DateTime
-  status             ElectionStatus  @default(UPCOMING)
+  status             ElectionStatus @default(UPCOMING)
   contractElectionId Int?
-  resultsPublished   Boolean         @default(false)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  resultsPublished   Boolean        @default(false)
   resultsPublishedAt DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
   candidates         Candidate[]
   votes              Vote[]
+}
+
+model Organization {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  users       User[]
+  elections   Election[]
 }
 
 model Candidate {
   id                  String   @id @default(uuid())
   name                String
   description         String?
-  credentials         String?
-  photoUrl            String?
   electionId          String
   contractCandidateId Int?
   createdAt           DateTime @default(now())
+  credentials         String?
+  photoUrl            String?
   election            Election @relation(fields: [electionId], references: [id])
   votes               Vote[]
 }
@@ -58,14 +73,15 @@ model Vote {
   candidateId String
   txHash      String    @unique
   createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id])
-  election    Election  @relation(fields: [electionId], references: [id])
   candidate   Candidate @relation(fields: [candidateId], references: [id])
+  election    Election  @relation(fields: [electionId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, electionId])
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   VOTER
 }
@@ -81,4 +97,9 @@ enum ElectionStatus {
   ACTIVE
   CLOSED
   PAUSED
+}
+
+enum ElectionScope {
+  GLOBAL
+  ORGANIZATION
 }

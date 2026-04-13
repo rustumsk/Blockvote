@@ -38,6 +38,15 @@ export const candidatesController = {
       if ((e as Error).message === 'Candidates can only be added to elections with status UPCOMING') {
         return res.status(400).json({ message: (e as Error).message })
       }
+      if ((e as Error).message === 'Election is not synced to contract. Re-sync election first.') {
+        return res.status(400).json({ message: (e as Error).message })
+      }
+      if ((e as Error).message === 'Candidate was not confirmed on-chain. Try again.') {
+        return res.status(502).json({ message: (e as Error).message })
+      }
+      if ((e as Error).message === 'Contract not configured on backend') {
+        return res.status(503).json({ message: (e as Error).message })
+      }
       if ((e as Error).message === 'S3 upload is not configured on the backend') {
         return res.status(500).json({ message: (e as Error).message })
       }

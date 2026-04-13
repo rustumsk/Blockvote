@@ -8,7 +8,9 @@ import usersRoutes from './modules/users/users.routes'
 import electionsRoutes from './modules/elections/elections.routes'
 import votesRoutes from './modules/votes/votes.routes'
 import resultsRoutes from './modules/results/results.routes'
+import organizationsRoutes from './modules/organizations/organizations.routes'
 import { initSocketServer } from './socket'
+import { ensureSuperAdmin } from './bootstrap/superadmin'
 
 dotenv.config()
 
@@ -23,6 +25,7 @@ app.use('/api/users', usersRoutes)
 app.use('/api/elections', electionsRoutes)
 app.use('/api/votes', votesRoutes)
 app.use('/api/results', resultsRoutes)
+app.use('/api/organizations', organizationsRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Blockvote API running' })
@@ -33,6 +36,16 @@ app.use(errorHandler)
 const PORT = process.env.PORT || 5000
 initSocketServer(server)
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+async function start() {
+  try {
+    await ensureSuperAdmin()
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
+    })
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    process.exit(1)
+  }
+}
+
+void start()

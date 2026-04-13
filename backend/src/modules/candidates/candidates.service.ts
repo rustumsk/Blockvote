@@ -35,61 +35,59 @@ export const candidatesService = {
     if (election.status !== 'UPCOMING') {
       throw new Error('Candidates can only be added to elections with status UPCOMING')
     }
-    const uploadedPhoto = data.photoFile ? await uploadCandidatePhoto(data.photoFile) : null
+    const contract = getContract()
+    const contractElectionId = election.contractElectionId
+    if (!contract) {
+      throw new Error('Contract not configured on backend')
+    }
+    if (contractElectionId == null) {
+      throw new Error('Election is not synced to contract. Re-sync election first.')
+    }
 
-    const candidate = await prisma.candidate.create({
+    const addCandidate = contract.getFunction('addCandidate')
+    const tx = await addCandidate(
+      contractElectionId,
+      data.name.trim(),
+      data.description?.trim() ?? ''
+    )
+    const receipt = await tx.wait()
+    const allLogs = receipt?.logs ?? []
+    const contractAddress = (contract.target as string).toLowerCase()
+    const ourLogs = allLogs.filter(
+      (log: { address?: string }) => String(log?.address ?? '').toLowerCase() === contractAddress
+    )
+    const iface = contract.interface
+    const logsToTry = ourLogs.length > 0 ? ourLogs : allLogs
+
+    let contractCandidateId: number | null = null
+    for (const log of logsToTry) {
+      try {
+        const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
+        if (parsed?.name === 'CandidateAdded' && Number(parsed.args.electionId) === contractElectionId) {
+          const id = parsed.args.candidateId
+          contractCandidateId = id != null ? Number(id) : null
+          break
+        }
+      } catch {
+        // skip
+      }
+    }
+
+    if (contractCandidateId == null) {
+      throw new Error('Candidate was not confirmed on-chain. Try again.')
+    }
+
+    const uploadedPhoto = data.photoFile ? await uploadCandidatePhoto(data.photoFile) : null
+    return prisma.candidate.create({
       data: {
         name: data.name.trim(),
         description: data.description?.trim() || null,
         credentials: data.credentials?.trim() || null,
         photoUrl: uploadedPhoto?.url || null,
         electionId,
+        contractCandidateId,
       },
     })
-    const contract = getContract()
-    const contractElectionId = election.contractElectionId
-    let contractCandidateId: number | null = null
-    if (contract && contractElectionId != null) {
-      try {
-        const addCandidate = contract.getFunction('addCandidate')
-        const tx = await addCandidate(
-          contractElectionId,
-          data.name.trim(),
-          data.description?.trim() ?? ''
-        )
-        const receipt = await tx.wait()
-        const allLogs = receipt?.logs ?? []
-        const contractAddress = (contract.target as string).toLowerCase()
-        const ourLogs = allLogs.filter(
-          (log: { address?: string }) => String(log?.address ?? '').toLowerCase() === contractAddress
-        )
-        const iface = contract.interface
-        const logsToTry = ourLogs.length > 0 ? ourLogs : allLogs
-        for (const log of logsToTry) {
-          try {
-            const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
-            if (parsed?.name === 'CandidateAdded' && Number(parsed.args.electionId) === contractElectionId) {
-              const id = parsed.args.candidateId
-              contractCandidateId = id != null ? Number(id) : null
-              break
-            }
-          } catch {
-            // skip
-          }
-        }
-      } catch (e) {
-        console.error('Contract addCandidate failed:', e)
-      }
-    }
-    if (contractCandidateId != null) {
-      await prisma.candidate.update({
-        where: { id: candidate.id },
-        data: { contractCandidateId },
-      })
-    }
-    return prisma.candidate.findUnique({
-      where: { id: candidate.id },
-    })!
   },
 
   async getPhoto(electionId: string, candidateId: string) {

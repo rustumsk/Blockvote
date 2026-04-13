@@ -23,15 +23,18 @@ async function syncElectionStatusInDb(id: string) {
 }
 
 export const electionsService = {
-  async getList(query: { status?: string }) {
-    const where: { status?: 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED' } = {}
+  async getList(query: { status?: string; scope?: 'GLOBAL' | 'ORGANIZATION' }) {
+    const where: { status?: 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'; scope?: 'GLOBAL' | 'ORGANIZATION' } = {}
     if (query.status && ['UPCOMING', 'ACTIVE', 'CLOSED', 'PAUSED'].includes(query.status)) {
       where.status = query.status as 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+    }
+    if (query.scope && ['GLOBAL', 'ORGANIZATION'].includes(query.scope)) {
+      where.scope = query.scope
     }
     const elections = await prisma.election.findMany({
       where,
       orderBy: { startDate: 'asc' },
-      include: { _count: { select: { candidates: true } } },
+      include: { _count: { select: { candidates: true } }, organization: { select: { id: true, name: true } } },
     })
     const synced = []
     for (const e of elections) {
@@ -50,6 +53,9 @@ export const electionsService = {
       id: e.id,
       title: e.title,
       description: e.description,
+      scope: e.scope,
+      organizationId: e.organizationId,
+      organization: e.organization,
       startDate: e.startDate,
       endDate: e.endDate,
       status: e.status,
@@ -62,75 +68,188 @@ export const electionsService = {
     }))
   },
 
+  async getForVoter(userId: string, query: { status?: string }) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organizationId: true },
+    })
+    if (!user) throw new Error('User not found')
+    if (!user.organizationId) throw new Error('User organization not set')
+
+    const where: {
+      status?: 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+      OR: Array<{ scope: 'GLOBAL' } | { scope: 'ORGANIZATION'; organizationId: string }>
+    } = {
+      OR: [
+        { scope: 'GLOBAL' },
+        { scope: 'ORGANIZATION', organizationId: user.organizationId },
+      ],
+    }
+    if (query.status && ['UPCOMING', 'ACTIVE', 'CLOSED', 'PAUSED'].includes(query.status)) {
+      where.status = query.status as 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+    }
+
+    const elections = await prisma.election.findMany({
+      where,
+      orderBy: { startDate: 'asc' },
+      include: { _count: { select: { candidates: true } }, organization: { select: { id: true, name: true } } },
+    })
+    return elections.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      scope: e.scope,
+      organizationId: e.organizationId,
+      organization: e.organization,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      status: e.status,
+      contractElectionId: e.contractElectionId,
+      resultsPublished: e.resultsPublished,
+      resultsPublishedAt: e.resultsPublishedAt,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      candidateCount: e._count.candidates,
+    }))
+  },
+
+  async getForAdmin(userId: string, query: { status?: string }) {
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, organizationId: true, canCreateGlobalElections: true },
+    })
+    if (!actor) throw new Error('User not found')
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPERADMIN') throw new Error('Admin access required')
+
+    const baseWhere: {
+      status?: 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+      OR?: Array<{ scope: 'GLOBAL' } | { scope: 'ORGANIZATION'; organizationId: string }>
+    } = {}
+    if (query.status && ['UPCOMING', 'ACTIVE', 'CLOSED', 'PAUSED'].includes(query.status)) {
+      baseWhere.status = query.status as 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'PAUSED'
+    }
+    if (actor.role === 'ADMIN') {
+      const orConditions: Array<{ scope: 'GLOBAL' } | { scope: 'ORGANIZATION'; organizationId: string }> = []
+      if (actor.organizationId) {
+        orConditions.push({ scope: 'ORGANIZATION', organizationId: actor.organizationId })
+      }
+      if (actor.canCreateGlobalElections) {
+        orConditions.push({ scope: 'GLOBAL' })
+      }
+      baseWhere.OR = orConditions
+    }
+
+    const elections = await prisma.election.findMany({
+      where: baseWhere,
+      orderBy: { startDate: 'asc' },
+      include: { _count: { select: { candidates: true } }, organization: { select: { id: true, name: true } } },
+    })
+
+    return elections.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      scope: e.scope,
+      organizationId: e.organizationId,
+      organization: e.organization,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      status: e.status,
+      contractElectionId: e.contractElectionId,
+      resultsPublished: e.resultsPublished,
+      resultsPublishedAt: e.resultsPublishedAt,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      candidateCount: e._count.candidates,
+    }))
+  },
+
   async getById(id: string) {
     const election = await prisma.election.findUnique({
       where: { id },
-      include: { candidates: true },
+      include: { candidates: true, organization: { select: { id: true, name: true } } },
     })
     if (!election) throw new Error('Election not found')
     await syncElectionStatusInDb(id)
     const updated = await prisma.election.findUnique({
       where: { id },
-      include: { candidates: true },
+      include: { candidates: true, organization: { select: { id: true, name: true } } },
     })
     return updated!
   },
 
-  async create(data: { title: string; description: string; startDate: Date; endDate: Date }) {
+  async create(
+    actorId: string,
+    data: { title: string; description: string; startDate: Date; endDate: Date; scope: 'GLOBAL' | 'ORGANIZATION'; organizationId?: string }
+  ) {
+    const actor = await prisma.user.findUnique({
+      where: { id: actorId },
+      select: { id: true, role: true, organizationId: true, canCreateGlobalElections: true },
+    })
+    if (!actor) throw new Error('Actor not found')
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPERADMIN') throw new Error('Admin access required')
+    if (data.scope === 'GLOBAL' && actor.role !== 'SUPERADMIN' && !actor.canCreateGlobalElections) {
+      throw new Error('You are not allowed to create global elections')
+    }
+    if (data.scope === 'ORGANIZATION' && actor.role === 'ADMIN') {
+      if (!actor.organizationId) throw new Error('Admin organization scope is not configured')
+      if (data.organizationId !== actor.organizationId) {
+        throw new Error('You can only create elections for your assigned organization')
+      }
+    }
+
     const startTs = Math.floor(new Date(data.startDate).getTime() / 1000)
     const endTs = Math.floor(new Date(data.endDate).getTime() / 1000)
-    const election = await prisma.election.create({
+    const contract = getContract()
+    if (!contract) {
+      throw new Error('Contract not configured on backend')
+    }
+    const tx = await contract.createElection(data.title, data.description, startTs, endTs)
+    const receipt = await tx.wait()
+    const allLogs = receipt?.logs ?? []
+    const contractAddress = (contract.target as string).toLowerCase()
+    const ourLogs = allLogs.filter((log: { address?: string }) => String(log?.address ?? '').toLowerCase() === contractAddress)
+    const iface = contract.interface
+    const logsToTry = ourLogs.length > 0 ? ourLogs : allLogs
+
+    let contractElectionId: number | null = null
+    for (const log of logsToTry) {
+      try {
+        const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
+        if (parsed?.name === 'ElectionCreated') {
+          const id = parsed.args.electionId
+          contractElectionId = id != null ? Number(id) : null
+          if (contractElectionId != null) break
+        }
+      } catch {
+        // skip logs that don't match our ABI
+      }
+    }
+
+    if (contractElectionId == null) {
+      throw new Error('Election was not confirmed on-chain. Try again.')
+    }
+    if (data.scope === 'ORGANIZATION' && !data.organizationId) {
+      throw new Error('organizationId is required for organization elections')
+    }
+    if (data.scope === 'ORGANIZATION' && data.organizationId) {
+      const org = await prisma.organization.findUnique({ where: { id: data.organizationId }, select: { id: true } })
+      if (!org) throw new Error('Organization not found')
+    }
+
+    const created = await prisma.election.create({
       data: {
         title: data.title,
         description: data.description,
+        scope: data.scope,
+        organizationId: data.scope === 'ORGANIZATION' ? data.organizationId : null,
         startDate: data.startDate,
         endDate: data.endDate,
         status: 'UPCOMING',
+        contractElectionId,
       },
-    })
-    const contract = getContract()
-    let contractElectionId: number | null = null
-    if (!contract) {
-      console.warn('Contract not configured (CONTRACT_ADDRESS, RPC_URL, PRIVATE_KEY). Election saved to DB only; contractElectionId will be null.')
-    } else {
-      try {
-        const tx = await contract.createElection(data.title, data.description, startTs, endTs)
-        const receipt = await tx.wait()
-        const allLogs = receipt?.logs ?? []
-        const contractAddress = (contract.target as string).toLowerCase()
-        const ourLogs = allLogs.filter((log: { address?: string }) => String(log?.address ?? '').toLowerCase() === contractAddress)
-        const iface = contract.interface
-        const logsToTry = ourLogs.length > 0 ? ourLogs : allLogs
-        for (const log of logsToTry) {
-          try {
-            const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
-            if (parsed?.name === 'ElectionCreated') {
-              const id = parsed.args.electionId
-              contractElectionId = id != null ? Number(id) : null
-              if (contractElectionId != null) break
-            }
-          } catch {
-            // skip logs that don't match our ABI
-          }
-        }
-        if (contractElectionId == null && allLogs.length > 0) {
-          console.warn('createElection tx succeeded but ElectionCreated event not found. Our logs:', ourLogs.length, 'total logs:', allLogs.length)
-        }
-      } catch (e) {
-        console.error('Contract createElection failed:', e)
-      }
-    }
-    if (contractElectionId != null) {
-      await prisma.election.update({
-        where: { id: election.id },
-        data: { contractElectionId },
-      })
-    }
-    const created = await prisma.election.findUnique({
-      where: { id: election.id },
       include: { _count: { select: { candidates: true } } },
     })
-    if (!created) throw new Error('Election not found after create')
     const { _count, ...e } = created
     return { ...e, candidateCount: _count.candidates }
   },
@@ -146,5 +265,78 @@ export const electionsService = {
     ])
 
     return { message: 'Election deleted successfully' }
+  },
+
+  async syncContractIds(id: string) {
+    const election = await prisma.election.findUnique({
+      where: { id },
+      include: { candidates: true },
+    })
+    if (!election) throw new Error('Election not found')
+
+    const contract = getContract()
+    if (!contract) {
+      throw new Error('Contract not configured on backend')
+    }
+
+    const normalize = (value: string) => value.trim().toLowerCase()
+    let resolvedElectionId = election.contractElectionId
+
+    if (resolvedElectionId == null) {
+      const total = Number(await contract.getTotalElections())
+      const targetTitle = normalize(election.title)
+
+      for (let i = 1; i <= total; i += 1) {
+        const chainElection = await contract.getElection(i)
+        const chainTitle = normalize(String(chainElection.title ?? ''))
+        if (chainTitle === targetTitle) {
+          resolvedElectionId = i
+          break
+        }
+      }
+    }
+
+    if (resolvedElectionId == null) {
+      throw new Error('Could not locate election on-chain')
+    }
+
+    if (election.contractElectionId == null) {
+      await prisma.election.update({
+        where: { id: election.id },
+        data: { contractElectionId: resolvedElectionId },
+      })
+    }
+
+    const chainElection = await contract.getElection(resolvedElectionId)
+    const chainCandidateCount = Number(chainElection.candidateCount ?? 0)
+    const candidateIdByName = new Map<string, number>()
+    for (let j = 1; j <= chainCandidateCount; j += 1) {
+      const chainCandidate = await contract.candidates(resolvedElectionId, j)
+      if (Boolean(chainCandidate.exists)) {
+        const chainName = normalize(String(chainCandidate.name ?? ''))
+        if (!candidateIdByName.has(chainName)) {
+          candidateIdByName.set(chainName, j)
+        }
+      }
+    }
+
+    let syncedCandidates = 0
+    for (const candidate of election.candidates) {
+      if (candidate.contractCandidateId != null) continue
+      const match = candidateIdByName.get(normalize(candidate.name))
+      if (match != null) {
+        await prisma.candidate.update({
+          where: { id: candidate.id },
+          data: { contractCandidateId: match },
+        })
+        syncedCandidates += 1
+      }
+    }
+
+    return {
+      message: 'Contract sync completed',
+      contractElectionId: resolvedElectionId,
+      syncedCandidates,
+    }
   },
 }

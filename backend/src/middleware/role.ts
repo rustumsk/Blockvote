@@ -3,8 +3,15 @@ import { AuthRequest } from './auth'
 import prisma from '../config/db'
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'ADMIN') {
+  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPERADMIN') {
     return res.status(403).json({ message: 'Admin access required' })
+  }
+  next()
+}
+
+export const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'SUPERADMIN') {
+    return res.status(403).json({ message: 'Superadmin access required' })
   }
   next()
 }

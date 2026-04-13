@@ -15,6 +15,9 @@ export const votesService = {
       include: { candidates: true },
     })
     if (!election) throw new Error('Election not found')
+    if (election.scope === 'ORGANIZATION' && user.organizationId !== election.organizationId) {
+      throw new Error('This election is restricted to another organization')
+    }
     if (election.status !== 'ACTIVE') throw new Error('Election is not active')
 
     const candidate = election.candidates.find((c) => c.id === candidateId)
