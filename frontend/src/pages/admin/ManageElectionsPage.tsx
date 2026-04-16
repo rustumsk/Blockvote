@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, Eye, Trash2 } from 'lucide-react';
+import { Plus, Eye, Trash2, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import { electionsApi, organizationsApi, type ElectionListItem, type Organization } from '../../api/client';
+import { electionGroupsApi, organizationsApi, type ElectionGroupListItem, type Organization } from '../../api/client';
 
 type FilterTab = 'all' | 'ACTIVE' | 'UPCOMING' | 'CLOSED';
 
@@ -36,7 +36,7 @@ const ManageElectionsPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showModal, setShowModal] = useState(false);
-  const [elections, setElections] = useState<ElectionListItem[]>([]);
+  const [elections, setElections] = useState<ElectionGroupListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
@@ -48,13 +48,14 @@ const ManageElectionsPage = () => {
   const [formEnd, setFormEnd] = useState('');
   const [formScope, setFormScope] = useState<'GLOBAL' | 'ORGANIZATION'>('GLOBAL');
   const [formOrganizationId, setFormOrganizationId] = useState('');
+  const [formPositions, setFormPositions] = useState<string[]>(['President']);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
     const status = activeTab === 'all' ? undefined : activeTab;
     setLoading(true);
     setError(null);
-    electionsApi
+    electionGroupsApi
       .getManageList({ status })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
@@ -91,16 +92,26 @@ const ManageElectionsPage = () => {
       setCreateError('Select an organization for organization elections.');
       return;
     }
+    const positions = formPositions.map((position) => position.trim()).filter(Boolean);
+    if (positions.length === 0) {
+      setCreateError('Add at least one position.');
+      return;
+    }
+    if (new Set(positions.map((position) => position.toLowerCase())).size !== positions.length) {
+      setCreateError('Position names must be unique.');
+      return;
+    }
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const created = await electionsApi.create({
+      const created = await electionGroupsApi.create({
         title: formTitle.trim(),
         description: formDescription.trim(),
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         scope: formScope,
         organizationId: formScope === 'ORGANIZATION' ? formOrganizationId : undefined,
+        positions,
       });
       setShowModal(false);
       setFormTitle('');
@@ -108,6 +119,7 @@ const ManageElectionsPage = () => {
       setFormStart('');
       setFormEnd('');
       setFormScope('GLOBAL');
+      setFormPositions(['President']);
       navigate(`/admin/elections/${created.id}`);
     } catch (err) {
       setCreateError((err as Error).message);
@@ -120,7 +132,7 @@ const ManageElectionsPage = () => {
     if (!window.confirm(`Delete election "${title}"? This cannot be undone.`)) return;
     setDeleteLoadingId(id);
     try {
-      await electionsApi.delete(id);
+      await electionGroupsApi.delete(id);
       setElections((prev) => prev.filter((e) => e.id !== id));
     } catch (err) {
       setError((err as Error).message);
@@ -175,7 +187,7 @@ const ManageElectionsPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
-                  {['Title', 'Scope', 'Status', 'Start Date', 'End Date', 'Candidates', 'Actions'].map((h) => (
+                  {['Title', 'Scope', 'Status', 'Start Date', 'End Date', 'Positions', 'Candidates', 'Actions'].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">
                       {h}
                     </th>
@@ -192,6 +204,7 @@ const ManageElectionsPage = () => {
                     <td className="px-5 py-4"><Badge variant={statusToVariant(el.status)} /></td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.startDate)}</td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{formatDate(el.endDate)}</td>
+                    <td className="px-5 py-4 text-bv-ink-secondary text-sm">{el.positionCount}</td>
                     <td className="px-5 py-4 text-bv-ink-secondary text-sm">{el.candidateCount}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
@@ -222,7 +235,7 @@ const ManageElectionsPage = () => {
           <form className="space-y-5" onSubmit={handleCreateSubmit}>
             <Input
               label="Election Title"
-              placeholder="e.g. Student Council President 2026"
+              placeholder="e.g. CSPS Election 2026"
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
             />
@@ -238,6 +251,49 @@ const ManageElectionsPage = () => {
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
               />
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-xs text-bv-ink-muted uppercase tracking-wide">
+                  Positions
+                </label>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-bv-ink-secondary transition-colors hover:text-bv-ink"
+                  onClick={() => setFormPositions((current) => [...current, ''])}
+                >
+                  <Plus size={13} />
+                  Add position
+                </button>
+              </div>
+              <div className="space-y-2">
+                {formPositions.map((position, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Position ${index + 1}`}
+                      placeholder={index === 0 ? 'President' : 'Vice President'}
+                      value={position}
+                      onChange={(e) =>
+                        setFormPositions((current) =>
+                          current.map((item, itemIndex) => (itemIndex === index ? e.target.value : item))
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      disabled={formPositions.length === 1}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-bv-ink-secondary transition-colors hover:text-red-300 disabled:opacity-40"
+                      onClick={() =>
+                        setFormPositions((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                      }
+                      title="Remove position"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

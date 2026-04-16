@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio, CheckCircle2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
@@ -7,8 +7,16 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import ResultsChart from '../../components/shared/ResultsChart';
-import { getCandidatePhotoSrc } from '../../api/client';
-import { electionsApi, candidatesApi, resultsApi, type ElectionDetail, type Candidate, type ElectionResults } from '../../api/client';
+import {
+  candidatesApi,
+  electionGroupsApi,
+  getCandidatePhotoSrc,
+  resultsApi,
+  type Candidate,
+  type ElectionGroupDetail,
+  type ElectionPosition,
+  type ElectionResults,
+} from '../../api/client';
 import { subscribeToElectionResults } from '../../lib/resultsSocket';
 import { notifyError, notifySuccess } from '../../lib/toast';
 
@@ -29,7 +37,8 @@ function statusToVariant(s: string): 'active' | 'upcoming' | 'closed' {
 
 const ElectionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [election, setElection] = useState<ElectionDetail | null>(null);
+  const [group, setGroup] = useState<ElectionGroupDetail | null>(null);
+  const [selectedElectionId, setSelectedElectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddCandidate, setShowAddCandidate] = useState(false);
@@ -44,21 +53,28 @@ const ElectionDetailPage = () => {
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [publishingResults, setPublishingResults] = useState(false);
-  const [syncingContract, setSyncingContract] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setError(null);
-    electionsApi
-      .getById(id)
-      .then(setElection)
+    electionGroupsApi
+      .getByIdForAdmin(id)
+      .then((data) => {
+        setGroup(data);
+        setSelectedElectionId((current) => current ?? data.positions[0]?.id ?? null);
+      })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, [id]);
 
+  const selectedPosition = useMemo<ElectionPosition | null>(() => {
+    if (!group) return null;
+    return group.positions.find((position) => position.id === selectedElectionId) ?? group.positions[0] ?? null;
+  }, [group, selectedElectionId]);
+
   useEffect(() => {
-    if (!id || !election) return;
+    if (!selectedPosition) return;
 
     let cancelled = false;
 
@@ -66,7 +82,7 @@ const ElectionDetailPage = () => {
       try {
         setResultsLoading(true);
         setResultsError(null);
-        const data = await resultsApi.getElectionResults(id);
+        const data = await resultsApi.getElectionResults(selectedPosition.id);
         if (!cancelled) setResults(data);
       } catch (e) {
         if (!cancelled) setResultsError((e as Error).message);
@@ -76,7 +92,7 @@ const ElectionDetailPage = () => {
     };
 
     fetchResults();
-    const unsubscribe = subscribeToElectionResults(id, (data) => {
+    const unsubscribe = subscribeToElectionResults(selectedPosition.id, (data) => {
       if (!cancelled) {
         setResults(data);
         setResultsError(null);
@@ -88,23 +104,27 @@ const ElectionDetailPage = () => {
       cancelled = true;
       unsubscribe();
     };
-  }, [id, election]);
+  }, [selectedPosition]);
+
+  const refreshGroup = async () => {
+    if (!id) return;
+    const refreshed = await electionGroupsApi.getByIdForAdmin(id);
+    setGroup(refreshed);
+  };
 
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !addName.trim()) return;
+    if (!selectedPosition || !addName.trim()) return;
     setAddLoading(true);
     setAddError(null);
     try {
-      const created = await candidatesApi.create(id, {
+      await candidatesApi.create(selectedPosition.id, {
         name: addName.trim(),
         description: addDescription.trim() || undefined,
         credentials: addCredentials.trim() || undefined,
         photo: addPhoto,
       });
-      setElection((prev) =>
-        prev ? { ...prev, candidates: [...prev.candidates, created] } : null
-      );
+      await refreshGroup();
       setShowAddCandidate(false);
       setAddName('');
       setAddDescription('');
@@ -122,18 +142,13 @@ const ElectionDetailPage = () => {
   };
 
   const handlePhotoChange = (file: File | null) => {
-    if (addPhotoPreview) {
-      URL.revokeObjectURL(addPhotoPreview);
-    }
-
+    if (addPhotoPreview) URL.revokeObjectURL(addPhotoPreview);
     setAddPhoto(file);
     setAddPhotoPreview(file ? URL.createObjectURL(file) : null);
   };
 
   const closeAddCandidateModal = () => {
-    if (addPhotoPreview) {
-      URL.revokeObjectURL(addPhotoPreview);
-    }
+    if (addPhotoPreview) URL.revokeObjectURL(addPhotoPreview);
     setShowAddCandidate(false);
     setAddError(null);
     setAddName('');
@@ -144,40 +159,17 @@ const ElectionDetailPage = () => {
   };
 
   const handlePublishResults = async () => {
-    if (!id) return;
+    if (!selectedPosition) return;
     setPublishingResults(true);
     try {
-      const data = await resultsApi.publishElectionResults(id);
+      const data = await resultsApi.publishElectionResults(selectedPosition.id);
       setResults(data.results);
-      setElection((prev) =>
-        prev
-          ? {
-              ...prev,
-              resultsPublished: true,
-              resultsPublishedAt: data.results.publishedAt,
-            }
-          : prev
-      );
-      notifySuccess('Official election results published.');
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'Failed to publish results');
+      await refreshGroup();
+      notifySuccess(`${selectedPosition.positionTitle ?? selectedPosition.title} results published.`);
+    } catch (err) {
+      notifyError(err instanceof Error ? err.message : 'Failed to publish results');
     } finally {
       setPublishingResults(false);
-    }
-  };
-
-  const handleSyncContractIds = async () => {
-    if (!id) return;
-    setSyncingContract(true);
-    try {
-      const result = await electionsApi.syncContractIds(id);
-      const refreshed = await electionsApi.getById(id);
-      setElection(refreshed);
-      notifySuccess(`Sync complete: ${result.syncedCandidates} candidate IDs linked.`);
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'Failed to sync contract IDs');
-    } finally {
-      setSyncingContract(false);
     }
   };
 
@@ -203,7 +195,7 @@ const ElectionDetailPage = () => {
     );
   }
 
-  if (error || !election) {
+  if (error || !group || !selectedPosition) {
     return (
       <div className="min-h-screen bg-bv-bg flex">
         <Sidebar variant="admin" />
@@ -217,23 +209,22 @@ const ElectionDetailPage = () => {
     );
   }
 
-  const isUpcoming = election.status === 'UPCOMING';
-  const isClosed = election.status === 'CLOSED';
+  const isUpcoming = group.status === 'UPCOMING';
+  const isClosed = selectedPosition.status === 'CLOSED';
   const canAddCandidates = isUpcoming;
   const totalVotes = results?.totalVotes ?? 0;
   const turnout = results?.statistics.turnoutPercentage ?? 0;
   const approvedVoters = results?.statistics.approvedVoterCount ?? 0;
-  const isPublished = results?.published ?? election.resultsPublished ?? false;
-  const publishedAt = results?.publishedAt ?? election.resultsPublishedAt ?? null;
+  const isPublished = results?.published ?? selectedPosition.resultsPublished ?? false;
+  const publishedAt = results?.publishedAt ?? selectedPosition.resultsPublishedAt ?? null;
   const winnerName = results?.winner?.name ?? 'No winner yet';
-  const hasMinimumCandidates = (election.candidates?.length ?? 0) >= 2;
-  const unsyncedCandidatesCount = election.candidates.filter((c) => c.contractCandidateId == null).length;
-  const isElectionUnsynced = election.contractElectionId == null || unsyncedCandidatesCount > 0;
+  const hasMinimumCandidates = (selectedPosition.candidates?.length ?? 0) >= 2;
+  const allPositionsReady = group.positions.every((position) => (position.candidates?.length ?? 0) >= 2);
   const setupSteps = [
     { label: 'Election details created', done: true },
-    { label: 'At least 2 candidates added', done: hasMinimumCandidates },
-    { label: 'Election is scheduled (upcoming)', done: isUpcoming || election.status === 'ACTIVE' },
-    { label: 'Ready to publish after close', done: isClosed },
+    { label: `${group.positionCount} position${group.positionCount === 1 ? '' : 's'} configured`, done: group.positionCount > 0 },
+    { label: 'Selected position has at least 2 candidates', done: hasMinimumCandidates },
+    { label: 'All positions have at least 2 candidates', done: allPositionsReady },
   ];
 
   return (
@@ -251,31 +242,17 @@ const ElectionDetailPage = () => {
           </Link>
           <div className="h-4 w-px bg-white/15" />
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-bv-ink">{election.title}</h1>
-            <Badge variant={statusToVariant(election.status)} />
+            <h1 className="text-2xl font-semibold text-bv-ink">{group.title}</h1>
+            <Badge variant={statusToVariant(group.status)} />
           </div>
         </div>
 
-        <p className="mb-6 max-w-2xl text-sm text-bv-ink-secondary">{election.description}</p>
+        <p className="mb-6 max-w-2xl text-sm text-bv-ink-secondary">{group.description}</p>
         <div className="flex items-center gap-4 text-bv-ink-muted text-sm mb-8">
-          <span>Start: {formatDate(election.startDate)}</span>
-          <span>End: {formatDate(election.endDate)}</span>
+          <span>Start: {formatDate(group.startDate)}</span>
+          <span>End: {formatDate(group.endDate)}</span>
+          <span>{group.scope === 'GLOBAL' ? 'Global' : group.organization?.name ?? 'Organization'}</span>
         </div>
-
-        {isElectionUnsynced && (
-          <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <p className="text-sm text-bv-ink-secondary">
-              This election is not fully synced to contract IDs yet.
-              {election.contractElectionId == null ? ' Election ID missing.' : ''}{' '}
-              {unsyncedCandidatesCount > 0 ? `${unsyncedCandidatesCount} candidate ID(s) missing.` : ''}
-            </p>
-            <div className="mt-3">
-              <Button variant="outline" size="sm" onClick={handleSyncContractIds} loading={syncingContract}>
-                {syncingContract ? 'Syncing...' : 'Re-sync Contract IDs'}
-              </Button>
-            </div>
-          </div>
-        )}
 
         <section className="mb-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -297,10 +274,28 @@ const ElectionDetailPage = () => {
           </div>
         </section>
 
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-4">
+          {group.positions.map((position) => (
+            <button
+              key={position.id}
+              type="button"
+              onClick={() => setSelectedElectionId(position.id)}
+              className={`rounded-xl border px-4 py-2 text-sm transition-colors ${
+                selectedPosition.id === position.id
+                  ? 'border-bv-accent bg-bv-accent text-bv-bg'
+                  : 'border-white/10 text-bv-ink-secondary hover:text-bv-ink'
+              }`}
+            >
+              {position.positionTitle ?? position.title}
+              <span className="ml-2 opacity-70">{position.candidates?.length ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { icon: Users, label: 'Candidates', value: String(election.candidates?.length ?? 0) },
-            { icon: BarChart2, label: 'Total Votes Cast', value: String(totalVotes) },
+            { icon: Users, label: 'Candidates', value: String(selectedPosition.candidates?.length ?? 0) },
+            { icon: BarChart2, label: 'Votes Cast', value: String(totalVotes) },
             { icon: Users, label: 'Approved Voters', value: String(approvedVoters) },
             { icon: Trophy, label: 'Turnout', value: `${turnout}%` },
           ].map((card) => (
@@ -315,7 +310,10 @@ const ElectionDetailPage = () => {
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-bv-ink">Candidates</h2>
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-bv-ink-muted">Selected Position</p>
+            <h2 className="mt-1 text-lg font-bold text-bv-ink">{selectedPosition.positionTitle ?? selectedPosition.title}</h2>
+          </div>
           {canAddCandidates && (
             <Button variant="primary" size="sm" onClick={() => setShowAddCandidate(true)}>
               <Plus size={16} />
@@ -331,13 +329,13 @@ const ElectionDetailPage = () => {
         )}
 
         <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.02] p-6">
-          {!election.candidates?.length ? (
+          {!selectedPosition.candidates?.length ? (
             <p className="text-bv-ink-muted">
-              No candidates yet. {canAddCandidates && 'Click "Add candidate" to complete setup before voting opens.'}
+              No candidates yet. {canAddCandidates && 'Add candidates for this position before voting opens.'}
             </p>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {election.candidates.map((c: Candidate, idx: number) => (
+              {selectedPosition.candidates.map((c: Candidate, idx: number) => (
                 <div
                   key={c.id}
                   className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4 transition-colors hover:bg-white/[0.03]"
@@ -345,11 +343,7 @@ const ElectionDetailPage = () => {
                   <div className="flex items-start gap-4">
                     <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                       {c.photoUrl ? (
-                        <img
-                          src={getCandidatePhotoSrc(c) ?? undefined}
-                          alt={c.name}
-                          className="h-full w-full object-cover"
-                        />
+                        <img src={getCandidatePhotoSrc(c) ?? undefined} alt={c.name} className="h-full w-full object-cover" />
                       ) : (
                         <Users size={24} className="text-bv-ink-muted" />
                       )}
@@ -366,11 +360,7 @@ const ElectionDetailPage = () => {
                           {c.credentials}
                         </p>
                       )}
-                      {c.description && (
-                        <p className="mt-2 text-bv-ink-secondary text-sm leading-relaxed">
-                          {c.description}
-                        </p>
-                      )}
+                      {c.description && <p className="mt-2 text-bv-ink-secondary text-sm leading-relaxed">{c.description}</p>}
                     </div>
                   </div>
                 </div>
@@ -379,27 +369,12 @@ const ElectionDetailPage = () => {
           )}
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" disabled>
-            Edit Election (coming soon)
-          </Button>
-          <Button variant="outline" disabled>
-            Pause Election (coming soon)
-          </Button>
-          {isClosed && !isPublished && (
-            <Button variant="primary" onClick={handlePublishResults} loading={publishingResults}>
-              {publishingResults ? 'Publishing...' : 'Publish Official Results'}
-            </Button>
-          )}
-        </div>
-
-        {/* Live Results */}
         <section className="mt-8">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-bv-ink">Live Results</h2>
+            <h2 className="text-lg font-bold text-bv-ink">Position Results</h2>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-bv-ink-secondary">
               <Radio size={12} />
-              Live tally stays visible
+              Live tally for selected position
             </span>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
@@ -409,7 +384,7 @@ const ElectionDetailPage = () => {
               totalVotes={results?.totalVotes ?? 0}
               loading={resultsLoading}
               error={resultsError}
-              emptyMessage="No votes have been recorded for this election yet."
+              emptyMessage="No votes have been recorded for this position yet."
             />
           </div>
         </section>
@@ -420,9 +395,7 @@ const ElectionDetailPage = () => {
             {isPublished ? (
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bv-ink-secondary">
-                    Official winner
-                  </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bv-ink-secondary">Official winner</p>
                   <p className="mt-3 text-2xl font-semibold text-bv-ink">{winnerName}</p>
                   <p className="mt-2 text-sm text-bv-ink-secondary">
                     Published {publishedAt ? new Date(publishedAt).toLocaleString() : 'just now'}.
@@ -434,17 +407,22 @@ const ElectionDetailPage = () => {
                 </div>
               </div>
             ) : isClosed ? (
-              <div>
-                <p className="text-bv-ink text-sm font-medium">Results are ready for publication.</p>
-                <p className="mt-2 text-sm text-bv-ink-secondary">
-                  Voters can still monitor the live tally, but the official published result will only appear after you confirm it here.
-                </p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-bv-ink text-sm font-medium">Results are ready for publication.</p>
+                  <p className="mt-2 text-sm text-bv-ink-secondary">
+                    Publish this position when the final tally is ready.
+                  </p>
+                </div>
+                <Button variant="primary" onClick={handlePublishResults} loading={publishingResults}>
+                  {publishingResults ? 'Publishing...' : 'Publish Result'}
+                </Button>
               </div>
             ) : (
               <div>
                 <p className="text-bv-ink text-sm font-medium">Official results are not available yet.</p>
                 <p className="mt-2 text-sm text-bv-ink-secondary">
-                  This election must close before an admin can publish the official result.
+                  This position must close before an admin can publish the official result.
                 </p>
               </div>
             )}
@@ -453,19 +431,11 @@ const ElectionDetailPage = () => {
       </main>
 
       {showAddCandidate && (
-        <Modal title="Add candidate" onClose={closeAddCandidateModal}>
+        <Modal title={`Add candidate for ${selectedPosition.positionTitle ?? selectedPosition.title}`} onClose={closeAddCandidateModal}>
           <form className="space-y-5" onSubmit={handleAddCandidate}>
-            <Input
-              label="Name"
-              placeholder="Candidate name"
-              value={addName}
-              onChange={(e) => setAddName(e.target.value)}
-              required
-            />
+            <Input label="Name" placeholder="Candidate name" value={addName} onChange={(e) => setAddName(e.target.value)} required />
             <div>
-              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
-                Description (optional)
-              </label>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Description (optional)</label>
               <textarea
                 rows={2}
                 placeholder="Short description"
@@ -475,21 +445,17 @@ const ElectionDetailPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
-                Credentials
-              </label>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Credentials</label>
               <textarea
                 rows={2}
-                placeholder="e.g. Debate champion, blockchain researcher, council secretary"
+                placeholder="e.g. Council secretary, project lead, debate champion"
                 className="bg-bv-surface border border-bv-border rounded-lg px-4 py-3 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full resize-none text-sm"
                 value={addCredentials}
                 onChange={(e) => setAddCredentials(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
-                Candidate Photo
-              </label>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Candidate Photo</label>
               <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-bv-border bg-bv-surface px-4 py-6 text-center hover:border-bv-accent/50 transition-colors">
                 <input
                   type="file"
@@ -499,23 +465,15 @@ const ElectionDetailPage = () => {
                 />
                 <div className="space-y-2">
                   {addPhotoPreview ? (
-                    <img
-                      src={addPhotoPreview}
-                      alt="Candidate preview"
-                      className="mx-auto h-28 w-28 rounded-2xl object-cover border border-bv-border"
-                    />
+                    <img src={addPhotoPreview} alt="Candidate preview" className="mx-auto h-28 w-28 rounded-2xl object-cover border border-bv-border" />
                   ) : (
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-bv-bg border border-bv-border">
                       <ImagePlus size={22} className="text-bv-accent" />
                     </div>
                   )}
                   <div>
-                    <p className="text-bv-ink text-sm font-medium">
-                      {addPhoto ? addPhoto.name : 'Upload a candidate headshot'}
-                    </p>
-                    <p className="text-bv-ink-muted text-xs mt-1">
-                      JPG, PNG, WEBP, or GIF up to 5MB
-                    </p>
+                    <p className="text-bv-ink text-sm font-medium">{addPhoto ? addPhoto.name : 'Upload a candidate headshot'}</p>
+                    <p className="text-bv-ink-muted text-xs mt-1">JPG, PNG, WEBP, or GIF up to 5MB</p>
                   </div>
                 </div>
               </label>
@@ -525,13 +483,7 @@ const ElectionDetailPage = () => {
               <Button type="submit" variant="primary" fullWidth loading={addLoading}>
                 {addLoading ? 'Adding...' : 'Add candidate'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                fullWidth
-                onClick={closeAddCandidateModal}
-                disabled={addLoading}
-              >
+              <Button type="button" variant="outline" fullWidth onClick={closeAddCandidateModal} disabled={addLoading}>
                 Cancel
               </Button>
             </div>
