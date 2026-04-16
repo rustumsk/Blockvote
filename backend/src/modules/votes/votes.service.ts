@@ -53,7 +53,11 @@ export const votesService = {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        election: true,
+        election: {
+          include: {
+            group: true,
+          },
+        },
         candidate: true,
       },
     })
@@ -91,4 +95,3 @@ export const votesService = {
     }
   },
 }
-

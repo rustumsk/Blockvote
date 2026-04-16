@@ -9,6 +9,7 @@ import electionsRoutes from './modules/elections/elections.routes'
 import votesRoutes from './modules/votes/votes.routes'
 import resultsRoutes from './modules/results/results.routes'
 import organizationsRoutes from './modules/organizations/organizations.routes'
+import electionGroupsRoutes from './modules/election-groups/election-groups.routes'
 import { initSocketServer } from './socket'
 import { ensureSuperAdmin } from './bootstrap/superadmin'
 
@@ -23,6 +24,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/elections', electionsRoutes)
+app.use('/api/election-groups', electionGroupsRoutes)
 app.use('/api/votes', votesRoutes)
 app.use('/api/results', resultsRoutes)
 app.use('/api/organizations', organizationsRoutes)
