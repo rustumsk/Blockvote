@@ -31,6 +31,9 @@ model Election {
   description        String
   scope              ElectionScope  @default(GLOBAL)
   organizationId     String?
+  groupId            String?
+  positionTitle      String?
+  positionOrder      Int            @default(0)
   startDate          DateTime
   endDate            DateTime
   status             ElectionStatus @default(UPCOMING)
@@ -40,8 +43,26 @@ model Election {
   resultsPublished   Boolean        @default(false)
   resultsPublishedAt DateTime?
   organization       Organization?  @relation(fields: [organizationId], references: [id])
+  group              ElectionGroup? @relation(fields: [groupId], references: [id])
   candidates         Candidate[]
   votes              Vote[]
+}
+
+model ElectionGroup {
+  id                 String         @id @default(uuid())
+  title              String
+  description        String
+  scope              ElectionScope  @default(GLOBAL)
+  organizationId     String?
+  startDate          DateTime
+  endDate            DateTime
+  status             ElectionStatus @default(UPCOMING)
+  resultsPublished   Boolean        @default(false)
+  resultsPublishedAt DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
+  elections          Election[]
 }
 
 model Organization {
@@ -51,6 +72,7 @@ model Organization {
   updatedAt   DateTime   @updatedAt
   users       User[]
   elections   Election[]
+  electionGroups ElectionGroup[]
 }
 
 model Candidate {
