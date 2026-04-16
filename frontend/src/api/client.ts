@@ -219,6 +219,33 @@ export type ElectionDetail = ElectionListItem & {
   candidates: Candidate[]
 }
 
+export type ElectionPosition = ElectionDetail & {
+  positionTitle?: string | null
+  positionOrder: number
+}
+
+export type ElectionGroupListItem = {
+  id: string
+  title: string
+  description: string
+  scope: 'GLOBAL' | 'ORGANIZATION'
+  organizationId?: string | null
+  organization?: { id: string; name: string } | null
+  startDate: string
+  endDate: string
+  status: ElectionStatus
+  resultsPublished?: boolean
+  resultsPublishedAt?: string | null
+  createdAt?: string
+  updatedAt?: string
+  positionCount: number
+  candidateCount: number
+  syncedPositionCount: number
+  positions: ElectionPosition[]
+}
+
+export type ElectionGroupDetail = ElectionGroupListItem
+
 export type ElectionResults = {
   candidates: { candidateId: string; name: string; voteCount: number }[]
   winner: { candidateId: string; name: string; voteCount: number } | null
@@ -282,6 +309,68 @@ export const electionsApi = {
   },
 }
 
+export const electionGroupsApi = {
+  getList(params?: { status?: string; scope?: 'GLOBAL' | 'ORGANIZATION' }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    if (params?.scope) sp.set('scope', params.scope)
+    const qs = sp.toString()
+    return api<ElectionGroupListItem[]>(`/api/election-groups${qs ? `?${qs}` : ''}`)
+  },
+
+  getMyList(params?: { status?: string }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    const qs = sp.toString()
+    return api<ElectionGroupListItem[]>(`/api/election-groups/mine${qs ? `?${qs}` : ''}`, { token: getToken() })
+  },
+
+  getManageList(params?: { status?: string }) {
+    const sp = new URLSearchParams()
+    if (params?.status) sp.set('status', params.status)
+    const qs = sp.toString()
+    return api<ElectionGroupListItem[]>(`/api/election-groups/manage${qs ? `?${qs}` : ''}`, { token: getToken() })
+  },
+
+  getById(id: string) {
+    return api<ElectionGroupDetail>(`/api/election-groups/${id}`)
+  },
+
+  getByIdForAdmin(id: string) {
+    return api<ElectionGroupDetail>(`/api/election-groups/${id}/admin`, { token: getToken() })
+  },
+
+  create(body: {
+    title: string
+    description: string
+    startDate: string
+    endDate: string
+    scope?: 'GLOBAL' | 'ORGANIZATION'
+    organizationId?: string
+    positions: string[]
+  }) {
+    return api<ElectionGroupDetail>('/api/election-groups', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      token: getToken(),
+    })
+  },
+
+  delete(id: string) {
+    return api<{ message: string }>(`/api/election-groups/${id}`, {
+      method: 'DELETE',
+      token: getToken(),
+    })
+  },
+
+  getResults(id: string) {
+    return api<{
+      group: { id: string; title: string; description: string; status: ElectionStatus; startDate: string; endDate: string }
+      positions: { electionId: string; positionTitle: string; positionOrder: number; results: ElectionResults }[]
+    }>(`/api/election-groups/${id}/results`)
+  },
+}
+
 export const organizationsApi = {
   list() {
     return api<Organization[]>('/api/organizations')
@@ -339,7 +428,7 @@ export const votesApi = {
         id: string
         txHash: string
         createdAt: string
-        election: { id: string; title: string }
+        election: { id: string; title: string; positionTitle?: string | null; group?: { id: string; title: string } | null }
         candidate: { id: string; name: string }
       }[]
     >('/api/votes/my', { token: getToken() })
