@@ -3,7 +3,7 @@ import { Search, Trophy } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../../components/layout/Sidebar'
 import ElectionCard from '../../components/shared/ElectionCard'
-import { electionsApi, type ElectionListItem } from '../../api/client'
+import { electionGroupsApi, type ElectionGroupListItem } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 
 type FilterTab = 'all' | 'ACTIVE' | 'UPCOMING' | 'CLOSED'
@@ -28,7 +28,7 @@ const ElectionsPage = () => {
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [scopeTab, setScopeTab] = useState<ScopeTab>('all')
   const [search, setSearch] = useState('')
-  const [elections, setElections] = useState<ElectionListItem[]>([])
+  const [elections, setElections] = useState<ElectionGroupListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +36,7 @@ const ElectionsPage = () => {
     const status = activeTab === 'all' ? undefined : activeTab
     setLoading(true)
     setError(null)
-    electionsApi
+    electionGroupsApi
       .getMyList({ status })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
@@ -170,7 +170,7 @@ const ElectionsPage = () => {
                 candidateCount={election.candidateCount}
                 hasVoted={false}
                 role="voter"
-                syncState={election.contractElectionId != null ? 'synced' : 'needs-sync'}
+                syncState={election.syncedPositionCount === election.positionCount ? 'synced' : 'needs-sync'}
               />
             ))}
           </div>

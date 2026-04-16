@@ -25,8 +25,16 @@ type VoteReceipt = {
   id: string
   txHash: string
   createdAt: string
-  election: { id: string; title: string }
+  election: { id: string; title: string; positionTitle?: string | null; group?: { id: string; title: string } | null }
   candidate: { id: string; name: string }
+}
+
+function getReceiptElectionTitle(receipt: VoteReceipt) {
+  return receipt.election.group?.title ?? receipt.election.title
+}
+
+function getReceiptPositionTitle(receipt: VoteReceipt) {
+  return receipt.election.positionTitle ?? (receipt.election.group ? receipt.election.title : null)
 }
 
 const ReceiptPage = () => {
@@ -83,7 +91,8 @@ const ReceiptPage = () => {
 
       top += 16
       const rows: Array<[string, string]> = [
-        ['Election', receipt.election.title],
+        ['Election', getReceiptElectionTitle(receipt)],
+        ...(getReceiptPositionTitle(receipt) ? ([['Position', getReceiptPositionTitle(receipt)!]] as Array<[string, string]>) : []),
         ['Candidate', receipt.candidate.name],
         ['Recorded', formatDateTime(receipt.createdAt)],
         ['Transaction Hash', receipt.txHash],
@@ -115,7 +124,7 @@ const ReceiptPage = () => {
       pdf.setTextColor(164, 174, 196)
       pdf.text('Use the transaction hash to verify this vote at any time.', left, top)
 
-      const safeElection = receipt.election.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+      const safeElection = getReceiptElectionTitle(receipt).replace(/[^a-z0-9]+/gi, '-').toLowerCase()
       pdf.save(`blockvote-receipt-${safeElection || 'vote'}.pdf`)
       notifySuccess('Receipt PDF downloaded.')
     } catch (error) {
@@ -171,7 +180,7 @@ const ReceiptPage = () => {
                   Latest Election
                 </div>
                 <p className="mt-3 truncate text-sm font-semibold text-bv-ink">
-                  {latestReceipt?.election.title ?? 'No votes yet'}
+                  {latestReceipt ? getReceiptElectionTitle(latestReceipt) : 'No votes yet'}
                 </p>
               </div>
               <div className="rounded-2xl border border-bv-border bg-bv-surface px-4 py-4">
@@ -267,8 +276,13 @@ const ReceiptPage = () => {
                             </span>
                           </div>
                           <p className="mt-2 truncate text-sm font-semibold text-bv-ink">
-                            {r.election.title}
+                            {getReceiptElectionTitle(r)}
                           </p>
+                          {getReceiptPositionTitle(r) && (
+                            <p className="mt-1 truncate text-xs text-bv-ink-secondary">
+                              {getReceiptPositionTitle(r)}
+                            </p>
+                          )}
                         </div>
 
                         <div className="min-w-0">

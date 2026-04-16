@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import StatsCard from '../../components/shared/StatsCard';
 import ElectionCard from '../../components/shared/ElectionCard';
-import { electionsApi, votesApi, type ElectionListItem } from '../../api/client';
+import { electionGroupsApi, votesApi, type ElectionGroupListItem } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 const VoterDashboard = () => {
   const { user } = useAuth();
-  const [elections, setElections] = useState<ElectionListItem[]>([]);
+  const [elections, setElections] = useState<ElectionGroupListItem[]>([]);
   const [myVotes, setMyVotes] = useState<
     {
       id: string;
@@ -26,7 +26,7 @@ const VoterDashboard = () => {
       try {
         setLoading(true);
         const [allElections, votes] = await Promise.all([
-          electionsApi.getMyList(),
+          electionGroupsApi.getMyList(),
           votesApi.myVotes().catch(() => []),
         ]);
         setElections(allElections);
@@ -121,7 +121,7 @@ const VoterDashboard = () => {
                   startDate={election.startDate}
                   endDate={election.endDate}
                   candidateCount={election.candidateCount}
-                  hasVoted={votedElectionIds.has(election.id)}
+                  hasVoted={election.positions.every((position) => votedElectionIds.has(position.id))}
                   role="voter"
                 />
               ))
