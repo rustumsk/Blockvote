@@ -21,7 +21,7 @@ export const usersController = {
   async getUserById(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const user = await usersService.getUserById(userId)
       return res.json(user)
@@ -35,7 +35,7 @@ export const usersController = {
     try {
       const adminId = req.user?.id
       if (!adminId) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const data = await usersService.deleteUser(adminId, userId)
       return res.json(data)
@@ -49,7 +49,7 @@ export const usersController = {
   async approveUser(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const data = await usersService.approveUser(req.user.id, userId)
       return res.json(data)
@@ -74,7 +74,7 @@ export const usersController = {
   async rejectUser(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const data = await usersService.rejectUser(req.user.id, userId)
       return res.json(data)
@@ -97,7 +97,7 @@ export const usersController = {
   async revokeUser(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const data = await usersService.revokeUser(req.user.id, userId)
       return res.json(data)
@@ -120,7 +120,7 @@ export const usersController = {
   async assignAdminScope(req: AuthRequest, res: Response) {
     try {
       if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
-      const userId = req.params.id
+      const userId = String(req.params.id || '')
       if (!userId) return res.status(400).json({ message: 'User ID is required' })
       const { role, organizationId, canCreateGlobalElections } = req.body
       if (role !== 'ADMIN' && role !== 'VOTER') {

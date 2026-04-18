@@ -12,13 +12,14 @@ import organizationsRoutes from './modules/organizations/organizations.routes'
 import electionGroupsRoutes from './modules/election-groups/election-groups.routes'
 import { initSocketServer } from './socket'
 import { ensureSuperAdmin } from './bootstrap/superadmin'
+import { getCorsOrigin } from './config/cors'
 
 dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
 
-app.use(cors({ origin: true, credentials: true }))
+app.use(cors({ origin: getCorsOrigin(), credentials: true }))
 app.use(express.json())
 
 app.use('/api/auth', authRoutes)

@@ -5,7 +5,8 @@ import { resultsService } from './results.service'
 export const resultsController = {
   async getResults(req: AuthRequest, res: Response) {
     try {
-      const { electionId } = req.params
+      const electionId = String(req.params.electionId || '')
+      if (!electionId) return res.status(400).json({ message: 'Election ID is required' })
       const data = await resultsService.getElectionResults(electionId)
       res.json(data)
     } catch (e) {
@@ -18,7 +19,8 @@ export const resultsController = {
 
   async getLogs(req: AuthRequest, res: Response) {
     try {
-      const { electionId } = req.params
+      const electionId = String(req.params.electionId || '')
+      if (!electionId) return res.status(400).json({ message: 'Election ID is required' })
       const logs = await resultsService.getElectionLogs(electionId)
       res.json(
         logs.map((v) => ({
@@ -38,7 +40,8 @@ export const resultsController = {
 
   async publish(req: AuthRequest, res: Response) {
     try {
-      const { electionId } = req.params
+      const electionId = String(req.params.electionId || '')
+      if (!electionId) return res.status(400).json({ message: 'Election ID is required' })
       const data = await resultsService.publishElectionResults(electionId)
       res.json({
         message: 'Results published successfully',
@@ -56,4 +59,3 @@ export const resultsController = {
     }
   },
 }
-

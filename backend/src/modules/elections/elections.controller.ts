@@ -51,7 +51,9 @@ export const electionsController = {
 
   async getById(req: AuthRequest, res: Response) {
     try {
-      const election = await electionsService.getById(req.params.id)
+      const id = String(req.params.id || '')
+      if (!id) return res.status(400).json({ message: 'Election ID is required' })
+      const election = await electionsService.getById(id)
       res.json(election)
     } catch (e) {
       if ((e as Error).message === 'Election not found') {
@@ -108,7 +110,8 @@ export const electionsController = {
 
   async delete(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params
+      const id = String(req.params.id || '')
+      if (!id) return res.status(400).json({ message: 'Election ID is required' })
       const result = await electionsService.delete(id)
       res.json(result)
     } catch (e) {
@@ -121,7 +124,8 @@ export const electionsController = {
 
   async syncContractIds(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params
+      const id = String(req.params.id || '')
+      if (!id) return res.status(400).json({ message: 'Election ID is required' })
       const result = await electionsService.syncContractIds(id)
       res.json(result)
     } catch (e) {
