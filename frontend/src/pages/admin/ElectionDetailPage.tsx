@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Users, BarChart2, Plus, ImagePlus, Trophy, Radio } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Badge from '../../components/ui/Badge';
@@ -218,14 +218,6 @@ const ElectionDetailPage = () => {
   const isPublished = results?.published ?? selectedPosition.resultsPublished ?? false;
   const publishedAt = results?.publishedAt ?? selectedPosition.resultsPublishedAt ?? null;
   const winnerName = results?.winner?.name ?? 'No winner yet';
-  const hasMinimumCandidates = (selectedPosition.candidates?.length ?? 0) >= 2;
-  const allPositionsReady = group.positions.every((position) => (position.candidates?.length ?? 0) >= 2);
-  const setupSteps = [
-    { label: 'Election details created', done: true },
-    { label: `${group.positionCount} position${group.positionCount === 1 ? '' : 's'} configured`, done: group.positionCount > 0 },
-    { label: 'Selected position has at least 2 candidates', done: hasMinimumCandidates },
-    { label: 'All positions have at least 2 candidates', done: allPositionsReady },
-  ];
 
   return (
     <div className="min-h-screen bg-bv-bg flex">
@@ -253,26 +245,6 @@ const ElectionDetailPage = () => {
           <span>End: {formatDate(group.endDate)}</span>
           <span>{group.scope === 'GLOBAL' ? 'Global' : group.organization?.name ?? 'Organization'}</span>
         </div>
-
-        <section className="mb-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-bv-ink-muted">Setup Progress</p>
-              <h2 className="mt-1 text-base font-semibold text-bv-ink">Election readiness checklist</h2>
-            </div>
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-bv-ink-secondary">
-              {setupSteps.filter((step) => step.done).length}/{setupSteps.length} complete
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {setupSteps.map((step) => (
-              <div key={step.label} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                <CheckCircle2 size={15} className={step.done ? 'text-white' : 'text-bv-ink-muted'} />
-                <span className={step.done ? 'text-sm text-bv-ink' : 'text-sm text-bv-ink-secondary'}>{step.label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-4">
           {group.positions.map((position) => (

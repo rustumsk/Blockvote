@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import StatsCard from '../../components/shared/StatsCard';
 import ElectionCard from '../../components/shared/ElectionCard';
-import { electionsApi, usersApi, type ElectionListItem, type User } from '../../api/client';
+import { electionGroupsApi, usersApi, type ElectionGroupListItem, type User } from '../../api/client';
 
 const AdminDashboard = () => {
-  const [elections, setElections] = useState<ElectionListItem[]>([]);
+  const [elections, setElections] = useState<ElectionGroupListItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +16,7 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         const [allElections, usersRes] = await Promise.all([
-          electionsApi.getManageList(),
+          electionGroupsApi.getManageList(),
           usersApi.getUsers(),
         ]);
         setElections(allElections);
@@ -124,6 +124,7 @@ const AdminDashboard = () => {
                   endDate={election.endDate}
                   candidateCount={election.candidateCount}
                   role="admin"
+                  showCountdown={false}
                 />
               ))
             )}
