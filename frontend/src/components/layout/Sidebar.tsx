@@ -9,6 +9,7 @@ import {
   User,
   Users,
   ScrollText,
+  BarChart3,
   Settings,
   Shield,
   LogOut,
@@ -40,7 +41,9 @@ const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: Vote, label: 'Elections', path: '/admin/elections' },
   { icon: Users, label: 'Voters', path: '/admin/voters' },
+  { icon: BarChart3, label: 'Reports', path: '/admin/reports' },
   { icon: ScrollText, label: 'Logs', path: '/admin/logs' },
+  { icon: Shield, label: 'Security', path: '/admin/security' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 

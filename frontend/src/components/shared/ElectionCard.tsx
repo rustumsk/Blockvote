@@ -17,6 +17,7 @@ interface ElectionCardProps {
   hasVoted?: boolean;
   role?: 'voter' | 'admin' | 'public';
   syncState?: 'synced' | 'needs-sync';
+  showCountdown?: boolean;
 }
 
 function formatShort(iso: string) {
@@ -51,13 +52,15 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   hasVoted = false,
   role = 'voter',
   syncState,
+  showCountdown = true,
 }) => {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    if (!showCountdown) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showCountdown]);
 
   const startTs = new Date(startDate).getTime();
   const endTs = new Date(endDate).getTime();
@@ -67,9 +70,9 @@ const ElectionCard: React.FC<ElectionCardProps> = ({
   const publicDetailHref = `/elections/${id}`;
 
   let countdownLabel: string | null = null;
-  if (isUpcoming) {
+  if (showCountdown && isUpcoming) {
     countdownLabel = `${formatCountdown(startTs - now)} until start`;
-  } else if (isActive) {
+  } else if (showCountdown && isActive) {
     countdownLabel = `${formatCountdown(endTs - now)} left`;
   }
 

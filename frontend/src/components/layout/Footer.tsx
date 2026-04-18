@@ -17,9 +17,9 @@ const Footer = () => {
         </p>
 
         <div className="flex items-center gap-5 text-xs text-bv-ink-secondary">
-          <a href="#" className="transition-colors hover:text-bv-ink">Privacy</a>
-          <a href="#" className="transition-colors hover:text-bv-ink">Terms</a>
-          <a href="#" className="transition-colors hover:text-bv-ink">Contact</a>
+          <Link to="/privacy" className="transition-colors hover:text-bv-ink">Privacy</Link>
+          <Link to="/terms" className="transition-colors hover:text-bv-ink">Terms</Link>
+          <Link to="/help" className="transition-colors hover:text-bv-ink">Help</Link>
         </div>
       </div>
     </footer>

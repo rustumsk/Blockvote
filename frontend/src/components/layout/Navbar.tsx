@@ -46,6 +46,12 @@ const Navbar = () => {
             <Search size={14} />
             Verify
           </Link>
+          <Link
+            to="/help"
+            className="text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink"
+          >
+            Help
+          </Link>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
