@@ -36,7 +36,7 @@ const VoterDashboard = () => {
       }
     };
     void load();
-  }, [user]);
+  }, [user?.id]);
 
   const active = elections.filter((e) => e.status === 'ACTIVE');
   const upcoming = elections.filter((e) => e.status === 'UPCOMING');
@@ -123,6 +123,7 @@ const VoterDashboard = () => {
                   candidateCount={election.candidateCount}
                   hasVoted={election.positions.every((position) => votedElectionIds.has(position.id))}
                   role="voter"
+                  showCountdown={false}
                 />
               ))
             )}

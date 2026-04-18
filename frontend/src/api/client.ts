@@ -1,5 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 export type User = {
   id: string
   name: string
@@ -50,7 +60,7 @@ export async function api<T>(
 
   const res = await fetch(`${API_BASE}${path}`, { ...rest, headers })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.message || res.statusText || 'Request failed')
+  if (!res.ok) throw new ApiError(data.message || res.statusText || 'Request failed', res.status)
   return data as T
 }
 
@@ -187,6 +197,7 @@ export type ElectionListItem = {
   description: string
   scope: 'GLOBAL' | 'ORGANIZATION'
   organizationId?: string | null
+  groupId?: string | null
   organization?: { id: string; name: string } | null
   startDate: string
   endDate: string

@@ -48,11 +48,20 @@ const CandidateProfilePage = () => {
       .finally(() => setLoading(false));
   }, [candidateId, electionId]);
 
+  const detailElectionId = election?.groupId ?? electionId ?? election?.id ?? '';
   const electionLink =
     token && user
       ? user.role !== 'VOTER'
-        ? `/admin/elections/${election?.id ?? ''}`
-        : `/voter/elections/${election?.id ?? ''}`
+        ? `/admin/elections/${detailElectionId}`
+        : `/voter/elections/${detailElectionId}`
+      : electionId
+        ? `/elections/${electionId}`
+        : '/elections';
+  const allElectionsLink =
+    token && user
+      ? user.role !== 'VOTER'
+        ? '/admin/elections'
+        : '/voter/elections'
       : '/elections';
 
   return (
@@ -60,7 +69,7 @@ const CandidateProfilePage = () => {
       <Navbar />
       <main className="mx-auto max-w-6xl px-6 pb-16 pt-24">
         <Link
-          to={electionId ? `/elections/${electionId}` : '/elections'}
+          to={electionLink}
           className="inline-flex items-center gap-2 text-sm text-bv-ink-secondary transition-colors hover:text-bv-ink"
         >
           <ArrowLeft size={16} />
@@ -146,7 +155,7 @@ const CandidateProfilePage = () => {
                     </Link>
                   )}
                   <Link
-                    to="/elections"
+                    to={allElectionsLink}
                     className="inline-flex items-center justify-center rounded-xl border border-bv-border bg-bv-bg px-5 py-3 text-sm font-semibold text-bv-ink-secondary transition-colors hover:text-bv-ink hover:border-bv-accent/35"
                   >
                     View All Elections

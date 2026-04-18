@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -19,11 +19,15 @@ import BlockchainLogsPage from './pages/admin/BlockchainLogsPage';
 import ElectionDetailPage from './pages/admin/ElectionDetailPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import SuperAdminPage from './pages/admin/SuperAdminPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminSecurityPage from './pages/admin/AdminSecurityPage';
 import PublicElectionsPage from './pages/public/PublicElectionsPage';
 import PublishedElectionsPage from './pages/public/PublishedElectionsPage';
 import CandidateProfilePage from './pages/public/CandidateProfilePage';
 import PublicElectionDetailPage from './pages/public/PublicElectionDetailPage';
 import PublicVerifyPage from './pages/public/PublicVerifyPage';
+import LegalPage from './pages/public/LegalPage';
+import HelpPage from './pages/public/HelpPage';
 import RequireRole from './components/routing/RequireRole';
 
 function App() {
@@ -41,6 +45,9 @@ function App() {
           <Route path="/elections/:id" element={<PublicElectionDetailPage />} />
           <Route path="/elections/:electionId/candidates/:candidateId" element={<CandidateProfilePage />} />
           <Route path="/verify" element={<PublicVerifyPage />} />
+          <Route path="/terms" element={<LegalPage type="terms" />} />
+          <Route path="/privacy" element={<LegalPage type="privacy" />} />
+          <Route path="/help" element={<HelpPage />} />
 
           {/* Voter */}
           <Route element={<RequireRole role="VOTER" />}>
@@ -59,12 +66,16 @@ function App() {
             <Route path="/admin/elections" element={<ManageElectionsPage />} />
             <Route path="/admin/elections/:id" element={<ElectionDetailPage />} />
             <Route path="/admin/voters" element={<ManageVotersPage />} />
+            <Route path="/admin/reports" element={<AdminReportsPage />} />
             <Route path="/admin/logs" element={<BlockchainLogsPage />} />
+            <Route path="/admin/security" element={<AdminSecurityPage />} />
             <Route path="/admin/settings" element={<AdminSettingsPage />} />
           </Route>
           <Route element={<RequireRole role="SUPERADMIN" />}>
             <Route path="/admin/superadmin" element={<SuperAdminPage />} />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ToastContainer
           position="top-right"

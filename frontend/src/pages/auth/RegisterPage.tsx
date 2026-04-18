@@ -141,7 +141,7 @@ const RegisterPage = () => {
       return;
     }
     if (!agreed) {
-      notifyError('Please agree to the terms before continuing.');
+      notifyError('Please agree to the Terms and Privacy Policy before continuing.');
       return;
     }
     if (walletStatus?.isRegistered) {
@@ -393,14 +393,20 @@ const RegisterPage = () => {
               </button>
               <span className="text-xs leading-6 text-bv-ink-secondary">
                 I agree to the{' '}
-                <a
-                  href="#"
+                <Link
+                  to="/terms"
                   className="text-bv-accent hover:underline"
-                  onClick={(e) => e.preventDefault()}
                 >
-                  Terms & Conditions
-                </a>{' '}
-                and understand my account must be approved before I can vote.
+                  Terms and Conditions
+                </Link>{' '}
+                and{' '}
+                <Link
+                  to="/privacy"
+                  className="text-bv-accent hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                . I understand my account must be approved before I can vote.
               </span>
             </label>
 
