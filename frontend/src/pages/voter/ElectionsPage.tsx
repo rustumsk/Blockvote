@@ -63,7 +63,7 @@ const ElectionsPage = () => {
           </div>
           <div className="flex items-center gap-3">
             <Link
-              to="/published-elections"
+              to="/voter/published-results"
               className="inline-flex items-center gap-2 rounded-xl border border-bv-border px-4 py-2.5 text-sm font-medium text-bv-ink-secondary transition-colors hover:border-bv-accent hover:text-bv-accent"
             >
               <Trophy size={15} />

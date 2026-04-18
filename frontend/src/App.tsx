@@ -9,6 +9,7 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import VoterDashboard from './pages/voter/VoterDashboard';
 import ElectionsPage from './pages/voter/ElectionsPage';
 import VotePage from './pages/voter/VotePage';
+import PublishedResultsPage from './pages/voter/PublishedResultsPage';
 import ReceiptPage from './pages/voter/ReceiptPage';
 import VerifyPage from './pages/voter/VerifyPage';
 import ProfilePage from './pages/voter/ProfilePage';
@@ -53,6 +54,7 @@ function App() {
           <Route element={<RequireRole role="VOTER" />}>
             <Route path="/voter/dashboard" element={<VoterDashboard />} />
             <Route path="/voter/elections" element={<ElectionsPage />} />
+            <Route path="/voter/published-results" element={<PublishedResultsPage />} />
             <Route path="/voter/elections/:id" element={<VotePage />} />
             <Route path="/voter/elections/:id/vote" element={<VotePage />} />
             <Route path="/voter/receipt" element={<ReceiptPage />} />
