@@ -320,17 +320,15 @@ export const electionGroupsService = {
 
     await assertCreateAccess(actorId, data)
 
-    const contractElectionIds: number[] = []
-    for (const position of positions) {
+    const contractElectionIds = await Promise.all(positions.map((position) => {
       const title = `${data.title.trim()} - ${position}`
-      const contractElectionId = await createContractElection({
+      return createContractElection({
         title,
         description: data.description,
         startDate: data.startDate,
         endDate: data.endDate,
       })
-      contractElectionIds.push(contractElectionId)
-    }
+    }))
 
     const created = await prisma.electionGroup.create({
       data: {

@@ -10,7 +10,9 @@ if (
 ) {
   try {
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL)
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider)
+    const wallet = new ethers.NonceManager(
+      new ethers.Wallet(process.env.PRIVATE_KEY, provider)
+    )
     contractInstance = new ethers.Contract(
       process.env.CONTRACT_ADDRESS,
       VotingSystemABI as ethers.InterfaceAbi,

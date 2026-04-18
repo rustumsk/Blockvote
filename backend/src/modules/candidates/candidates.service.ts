@@ -44,6 +44,12 @@ export const candidatesService = {
       throw new Error('Election is not synced to contract. Re-sync election first.')
     }
 
+    const uploadedPhotoPromise = data.photoFile
+      ? uploadCandidatePhoto(data.photoFile).then(
+          (photo) => ({ photo, error: null }),
+          (error: unknown) => ({ photo: null, error })
+        )
+      : Promise.resolve({ photo: null, error: null })
     const addCandidate = contract.getFunction('addCandidate')
     const tx = await addCandidate(
       contractElectionId,
@@ -77,7 +83,9 @@ export const candidatesService = {
       throw new Error('Candidate was not confirmed on-chain. Try again.')
     }
 
-    const uploadedPhoto = data.photoFile ? await uploadCandidatePhoto(data.photoFile) : null
+    const uploadedPhotoResult = await uploadedPhotoPromise
+    if (uploadedPhotoResult.error) throw uploadedPhotoResult.error
+    const uploadedPhoto = uploadedPhotoResult.photo
     return prisma.candidate.create({
       data: {
         name: data.name.trim(),

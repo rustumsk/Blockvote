@@ -197,6 +197,13 @@ export const electionsService = {
         throw new Error('You can only create elections for your assigned organization')
       }
     }
+    if (data.scope === 'ORGANIZATION' && !data.organizationId) {
+      throw new Error('organizationId is required for organization elections')
+    }
+    if (data.scope === 'ORGANIZATION' && data.organizationId) {
+      const org = await prisma.organization.findUnique({ where: { id: data.organizationId }, select: { id: true } })
+      if (!org) throw new Error('Organization not found')
+    }
 
     const startTs = Math.floor(new Date(data.startDate).getTime() / 1000)
     const endTs = Math.floor(new Date(data.endDate).getTime() / 1000)
@@ -204,7 +211,8 @@ export const electionsService = {
     if (!contract) {
       throw new Error('Contract not configured on backend')
     }
-    const tx = await contract.createElection(data.title, data.description, startTs, endTs)
+    const createElection = contract.getFunction('createElection')
+    const tx = await createElection(data.title, data.description, startTs, endTs)
     const receipt = await tx.wait()
     const allLogs = receipt?.logs ?? []
     const contractAddress = (contract.target as string).toLowerCase()
@@ -228,13 +236,6 @@ export const electionsService = {
 
     if (contractElectionId == null) {
       throw new Error('Election was not confirmed on-chain. Try again.')
-    }
-    if (data.scope === 'ORGANIZATION' && !data.organizationId) {
-      throw new Error('organizationId is required for organization elections')
-    }
-    if (data.scope === 'ORGANIZATION' && data.organizationId) {
-      const org = await prisma.organization.findUnique({ where: { id: data.organizationId }, select: { id: true } })
-      if (!org) throw new Error('Organization not found')
     }
 
     const created = await prisma.election.create({
@@ -283,11 +284,13 @@ export const electionsService = {
     let resolvedElectionId = election.contractElectionId
 
     if (resolvedElectionId == null) {
-      const total = Number(await contract.getTotalElections())
+      const getTotalElections = contract.getFunction('getTotalElections')
+      const getElection = contract.getFunction('getElection')
+      const total = Number(await getTotalElections())
       const targetTitle = normalize(election.title)
 
       for (let i = 1; i <= total; i += 1) {
-        const chainElection = await contract.getElection(i)
+        const chainElection = await getElection(i)
         const chainTitle = normalize(String(chainElection.title ?? ''))
         if (chainTitle === targetTitle) {
           resolvedElectionId = i
@@ -307,15 +310,25 @@ export const electionsService = {
       })
     }
 
-    const chainElection = await contract.getElection(resolvedElectionId)
+    const getElection = contract.getFunction('getElection')
+    const getCandidate = contract.getFunction('candidates')
+    const chainElection = await getElection(resolvedElectionId)
     const chainCandidateCount = Number(chainElection.candidateCount ?? 0)
     const candidateIdByName = new Map<string, number>()
-    for (let j = 1; j <= chainCandidateCount; j += 1) {
-      const chainCandidate = await contract.candidates(resolvedElectionId, j)
+    const chainCandidates = await Promise.all(
+      Array.from({ length: chainCandidateCount }, (_, index) => {
+        const candidateId = index + 1
+        return getCandidate(resolvedElectionId, candidateId).then((candidate) => ({
+          candidate,
+          candidateId,
+        }))
+      })
+    )
+    for (const { candidate: chainCandidate, candidateId } of chainCandidates) {
       if (Boolean(chainCandidate.exists)) {
         const chainName = normalize(String(chainCandidate.name ?? ''))
         if (!candidateIdByName.has(chainName)) {
-          candidateIdByName.set(chainName, j)
+          candidateIdByName.set(chainName, candidateId)
         }
       }
     }
