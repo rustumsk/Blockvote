@@ -6,7 +6,7 @@ export const electionsController = {
   async getList(req: AuthRequest, res: Response) {
     try {
       const status = req.query.status as string | undefined
-      const scope = req.query.scope as 'GLOBAL' | 'ORGANIZATION' | undefined
+      const scope = 'GLOBAL'
       const list = await electionsService.getList({ status, scope })
       res.json(list)
     } catch (e) {

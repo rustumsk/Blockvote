@@ -2,6 +2,12 @@ import { Response } from 'express'
 import { AuthRequest } from '../../middleware/auth'
 import { votesService } from './votes.service'
 
+function maskWalletAddress(walletAddress?: string | null) {
+  if (!walletAddress) return null
+  if (walletAddress.length <= 12) return walletAddress
+  return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+}
+
 export const votesController = {
   async cast(req: AuthRequest, res: Response) {
     try {
@@ -65,18 +71,27 @@ export const votesController = {
 
   async verify(req: AuthRequest, res: Response) {
     try {
-      const { txHash } = req.params
+      const txHash = String(req.params.txHash ?? '')
       if (!txHash) {
         return res.status(400).json({ message: 'txHash is required' })
       }
       const result = await votesService.verify(txHash)
-      if (!result.verified) {
+      if (!result.verified || !result.vote) {
         return res.status(404).json({ message: 'Vote not found' })
       }
-      res.json(result)
+      const vote = result.vote
+      res.json({
+        ...result,
+        vote: {
+          ...vote,
+          user: {
+            ...vote.user,
+            walletAddress: maskWalletAddress(vote.user.walletAddress),
+          },
+        },
+      })
     } catch (e) {
       res.status(500).json({ message: (e as Error).message })
     }
   },
 }
-
