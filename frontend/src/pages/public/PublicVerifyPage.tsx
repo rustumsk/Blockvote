@@ -5,6 +5,13 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { votesApi } from '../../api/client';
 
+function maskWalletAddress(walletAddress?: string | null) {
+  if (!walletAddress) return 'Unknown wallet';
+  if (walletAddress.includes('...')) return walletAddress;
+  if (walletAddress.length <= 12) return walletAddress;
+  return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+}
+
 const PublicVerifyPage = () => {
   const [txHash, setTxHash] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +47,7 @@ const PublicVerifyPage = () => {
       setResult({
         election: res.vote.election.title,
         candidate: res.vote.candidate.name,
-        wallet: res.vote.user.walletAddress ?? 'Unknown wallet',
+        wallet: maskWalletAddress(res.vote.user.walletAddress),
         timestamp: new Date(createdAt).toLocaleString(),
         txHash: res.vote.txHash,
       });

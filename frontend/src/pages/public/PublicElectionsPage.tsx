@@ -41,7 +41,7 @@ const PublicElectionsPage = () => {
     setLoading(true)
     setError(null)
     electionsApi
-      .getList({ status })
+      .getList({ status, scope: 'GLOBAL' })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false))

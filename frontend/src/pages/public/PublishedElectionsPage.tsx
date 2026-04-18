@@ -23,7 +23,7 @@ const PublishedElectionsPage = () => {
     setLoading(true)
     setError(null)
     electionsApi
-      .getList({ status: 'CLOSED' })
+      .getList({ status: 'CLOSED', scope: 'GLOBAL' })
       .then(setElections)
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false))
