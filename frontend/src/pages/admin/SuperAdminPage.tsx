@@ -68,13 +68,24 @@ const SuperAdminPage = () => {
         canCreateGlobalElections:
           role === 'ADMIN' ? Boolean(scopeGlobalByUser[user.id] ?? user.canCreateGlobalElections) : false,
       });
-      notifySuccess(role === 'ADMIN' ? 'User promoted to admin.' : 'User demoted to voter.');
+      notifySuccess(role === 'ADMIN' ? 'Admin scope saved.' : 'User demoted to voter.');
       await load();
     } catch (error) {
       notifyError(error instanceof Error ? error.message : 'Failed to update role scope');
     } finally {
       setActingUserId(null);
     }
+  };
+
+  const getPendingScope = (user: User) => {
+    const organizationId = scopeOrgByUser[user.id] || user.organizationId || organizations[0]?.id || '';
+    const canCreateGlobalElections = Boolean(scopeGlobalByUser[user.id] ?? user.canCreateGlobalElections);
+    const scopeChanged =
+      user.role === 'ADMIN' &&
+      (organizationId !== (user.organizationId || '') ||
+        canCreateGlobalElections !== Boolean(user.canCreateGlobalElections));
+
+    return { organizationId, canCreateGlobalElections, scopeChanged };
   };
 
   return (
@@ -153,7 +164,9 @@ const SuperAdminPage = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
+                  filteredUsers.map((u) => {
+                    const pendingScope = getPendingScope(u);
+                    return (
                   <tr key={u.id}>
                     <td className="px-4 py-3 text-sm text-bv-ink">
                       <div>{u.name}</div>
@@ -190,10 +203,20 @@ const SuperAdminPage = () => {
                         <button
                           type="button"
                           onClick={() => void updateRoleScope(u, 'ADMIN')}
-                          disabled={actingUserId === u.id || organizations.length === 0}
+                          disabled={
+                            actingUserId === u.id ||
+                            organizations.length === 0 ||
+                            (u.role === 'ADMIN' && !pendingScope.scopeChanged)
+                          }
                           className="rounded-lg bg-blue-500/20 px-2.5 py-1.5 text-xs text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
                         >
-                          {actingUserId === u.id ? 'Saving...' : 'Make Admin'}
+                          {actingUserId === u.id
+                            ? 'Saving...'
+                            : u.role === 'ADMIN'
+                              ? pendingScope.scopeChanged
+                                ? 'Apply Changes'
+                                : 'Admin Applied'
+                              : 'Make Admin'}
                         </button>
                         {u.role === 'ADMIN' && (
                           <button
@@ -208,7 +231,8 @@ const SuperAdminPage = () => {
                       </div>
                     </td>
                   </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

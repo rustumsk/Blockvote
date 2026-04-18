@@ -38,6 +38,16 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 const VotePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -323,6 +333,15 @@ const VotePage = () => {
             </div>
 
             <p className="mb-6 max-w-3xl text-sm leading-relaxed text-bv-ink-secondary">{group.description}</p>
+
+            <div className="mb-6 flex flex-wrap gap-3 text-sm text-bv-ink-secondary">
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2">
+                Start: {formatDateTime(group.startDate)}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2">
+                End: {formatDateTime(group.endDate)}
+              </span>
+            </div>
 
             {statusMessage && (
               <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-bv-ink-secondary">

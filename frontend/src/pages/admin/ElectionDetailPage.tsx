@@ -20,11 +20,13 @@ import {
 import { subscribeToElectionResults } from '../../lib/resultsSocket';
 import { notifyError, notifySuccess } from '../../lib/toast';
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -241,8 +243,8 @@ const ElectionDetailPage = () => {
 
         <p className="mb-6 max-w-2xl text-sm text-bv-ink-secondary">{group.description}</p>
         <div className="flex items-center gap-4 text-bv-ink-muted text-sm mb-8">
-          <span>Start: {formatDate(group.startDate)}</span>
-          <span>End: {formatDate(group.endDate)}</span>
+          <span>Start: {formatDateTime(group.startDate)}</span>
+          <span>End: {formatDateTime(group.endDate)}</span>
           <span>{group.scope === 'GLOBAL' ? 'Global' : group.organization?.name ?? 'Organization'}</span>
         </div>
 
