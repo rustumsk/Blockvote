@@ -13,6 +13,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import LandingParticles from '../components/landing/LandingParticles';
 
 const proofPoints = [
   {
@@ -116,10 +117,9 @@ const LandingPage = () => {
 
       <main className="relative">
         <section className="landing-hero relative flex min-h-screen items-center px-6 pb-14 pt-28 sm:px-8 lg:px-12">
+          <LandingParticles />
           <div className="landing-hero__aurora" aria-hidden="true" />
           <div className="landing-hero__grid" aria-hidden="true" />
-          <div className="landing-orb landing-orb--one" aria-hidden="true" />
-          <div className="landing-orb landing-orb--two" aria-hidden="true" />
 
           <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] lg:items-end">
             <div className="max-w-3xl">

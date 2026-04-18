@@ -206,10 +206,13 @@ export const usersService = {
     if (!target) throw new Error('User not found')
     if (target.role === 'SUPERADMIN') throw new Error('Cannot modify superadmin role')
 
-    if (input.role === 'ADMIN') {
-      if (!input.organizationId) throw new Error('organizationId is required for admin role')
+    if (input.organizationId) {
       const org = await prisma.organization.findUnique({ where: { id: input.organizationId }, select: { id: true } })
       if (!org) throw new Error('Organization not found')
+    }
+
+    if (input.role === 'ADMIN') {
+      if (!input.organizationId) throw new Error('organizationId is required for admin role')
       await prisma.user.update({
         where: { id: targetUserId },
         data: {
@@ -221,13 +224,14 @@ export const usersService = {
       return { message: 'User promoted to admin with scoped permissions' }
     }
 
-    await prisma.user.update({
-      where: { id: targetUserId },
-      data: {
-        role: 'VOTER',
-        canCreateGlobalElections: false,
-      },
-    })
+      await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          role: 'VOTER',
+          organizationId: input.organizationId ?? undefined,
+          canCreateGlobalElections: false,
+        },
+      })
     return { message: 'User role set to voter' }
   },
 }

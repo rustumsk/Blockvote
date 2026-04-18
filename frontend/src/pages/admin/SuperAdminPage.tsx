@@ -64,11 +64,11 @@ const SuperAdminPage = () => {
       await usersApi.assignRoleScope(user.id, {
         role,
         organizationId:
-          role === 'ADMIN' ? scopeOrgByUser[user.id] || user.organizationId || organizations[0]?.id : undefined,
+          scopeOrgByUser[user.id] || user.organizationId || organizations[0]?.id,
         canCreateGlobalElections:
           role === 'ADMIN' ? Boolean(scopeGlobalByUser[user.id] ?? user.canCreateGlobalElections) : false,
       });
-      notifySuccess(role === 'ADMIN' ? 'Admin scope saved.' : 'User demoted to voter.');
+      notifySuccess(role === 'ADMIN' ? 'Admin scope saved.' : 'Voter scope saved.');
       await load();
     } catch (error) {
       notifyError(error instanceof Error ? error.message : 'Failed to update role scope');
@@ -80,12 +80,12 @@ const SuperAdminPage = () => {
   const getPendingScope = (user: User) => {
     const organizationId = scopeOrgByUser[user.id] || user.organizationId || organizations[0]?.id || '';
     const canCreateGlobalElections = Boolean(scopeGlobalByUser[user.id] ?? user.canCreateGlobalElections);
-    const scopeChanged =
-      user.role === 'ADMIN' &&
-      (organizationId !== (user.organizationId || '') ||
-        canCreateGlobalElections !== Boolean(user.canCreateGlobalElections));
+    const organizationChanged = organizationId !== (user.organizationId || '');
+    const globalScopeChanged =
+      user.role === 'ADMIN' && canCreateGlobalElections !== Boolean(user.canCreateGlobalElections);
+    const scopeChanged = organizationChanged || globalScopeChanged;
 
-    return { organizationId, canCreateGlobalElections, scopeChanged };
+    return { organizationId, canCreateGlobalElections, organizationChanged, scopeChanged };
   };
 
   return (
@@ -177,7 +177,7 @@ const SuperAdminPage = () => {
                       <select
                         value={scopeOrgByUser[u.id] || u.organizationId || organizations[0]?.id || ''}
                         onChange={(e) => setScopeOrgByUser((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                        className="rounded border border-white/10 bg-black/20 px-2 py-1 text-sm text-bv-ink"
+                        className="rounded border border-white/10 bg-bv-surface px-2 py-1 text-sm text-bv-ink shadow-sm outline-none focus:border-bv-accent"
                       >
                         {organizations.map((org) => (
                           <option key={org.id} value={org.id}>
@@ -202,22 +202,30 @@ const SuperAdminPage = () => {
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => void updateRoleScope(u, 'ADMIN')}
+                          onClick={() => void updateRoleScope(u, u.role === 'ADMIN' ? 'ADMIN' : 'VOTER')}
                           disabled={
                             actingUserId === u.id ||
                             organizations.length === 0 ||
-                            (u.role === 'ADMIN' && !pendingScope.scopeChanged)
+                            !pendingScope.scopeChanged
                           }
                           className="rounded-lg bg-blue-500/20 px-2.5 py-1.5 text-xs text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
                         >
                           {actingUserId === u.id
                             ? 'Saving...'
-                            : u.role === 'ADMIN'
-                              ? pendingScope.scopeChanged
-                                ? 'Apply Changes'
-                                : 'Admin Applied'
-                              : 'Make Admin'}
+                            : pendingScope.scopeChanged
+                              ? 'Apply Changes'
+                              : 'Applied'}
                         </button>
+                        {u.role === 'VOTER' && (
+                          <button
+                            type="button"
+                            onClick={() => void updateRoleScope(u, 'ADMIN')}
+                            disabled={actingUserId === u.id || organizations.length === 0}
+                            className="rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                          >
+                            Make Admin
+                          </button>
+                        )}
                         {u.role === 'ADMIN' && (
                           <button
                             type="button"

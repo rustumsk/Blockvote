@@ -43,6 +43,21 @@ a {
   color: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #101010;
+  color: #f4f4f4;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #242424;
+  color: #ffffff;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -118,9 +133,23 @@ a {
   pointer-events: none;
 }
 
+.landing-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.78;
+  pointer-events: auto;
+  mask-image: linear-gradient(90deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.62), transparent 96%);
+}
+
+.landing-particles canvas {
+  display: block;
+}
+
 .landing-hero__grid {
   position: absolute;
   inset: 10% 0 0;
+  z-index: 0;
   background-image:
     linear-gradient(to right, var(--bv-grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--bv-grid) 1px, transparent 1px);
@@ -586,9 +615,14 @@ a {
   }
 
   .landing-hero__aurora,
+  .landing-particles,
   .landing-orb,
   .landing-signal__line,
   .landing-signal__pulse {
     animation: none !important;
+  }
+
+  .landing-particles {
+    display: none !important;
   }
 }
