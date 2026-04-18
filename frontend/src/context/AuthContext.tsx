@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { authApi, type User } from '../api/client'
+import { ApiError, authApi, type User } from '../api/client'
 import { clearPendingWallet, getPendingWallet } from '../utils/wallet'
 import { notifyError, notifyInfo } from '../lib/toast'
 
@@ -92,8 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = await authApi.me()
       setUser(u)
       return u
-    } catch {
-      logout()
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        logout()
+        return null
+      }
       return null
     }
   }, [token, setUser, logout])
