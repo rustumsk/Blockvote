@@ -34,8 +34,44 @@ type PendingVote = {
   candidate: Candidate;
 };
 
+const EXPECTED_CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? '11155111');
+const EXPECTED_CHAIN_HEX = `0x${EXPECTED_CHAIN_ID.toString(16)}`;
+const EXPECTED_CHAIN_NAME = EXPECTED_CHAIN_ID === 11155111 ? 'Sepolia' : `chain ${EXPECTED_CHAIN_ID}`;
+
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
+}
+
+function getVoteErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = typeof error === 'object' && error != null && 'code' in error ? String((error as { code?: unknown }).code) : '';
+  if (code === 'BAD_DATA' || message.includes('could not decode result data')) {
+    return `Could not read the voting contract. Please switch MetaMask to ${EXPECTED_CHAIN_NAME} and try again.`;
+  }
+  return message;
+}
+
+async function switchToExpectedChain() {
+  await (window as any).ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: EXPECTED_CHAIN_HEX }],
+  });
+}
+
+async function addExpectedChain() {
+  if (EXPECTED_CHAIN_ID !== 11155111) return;
+  await (window as any).ethereum.request({
+    method: 'wallet_addEthereumChain',
+    params: [
+      {
+        chainId: EXPECTED_CHAIN_HEX,
+        chainName: 'Sepolia',
+        nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
+        blockExplorerUrls: ['https://sepolia.etherscan.io'],
+      },
+    ],
+  });
 }
 
 function formatDateTime(iso: string) {
@@ -217,7 +253,33 @@ const VotePage = () => {
 
     setSubmitting(true);
     try {
-      const provider = new BrowserProvider((window as any).ethereum);
+      let provider = new BrowserProvider((window as any).ethereum);
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== EXPECTED_CHAIN_ID) {
+        try {
+          await switchToExpectedChain();
+        } catch (switchError) {
+          const switchCode =
+            typeof switchError === 'object' && switchError != null && 'code' in switchError
+              ? Number((switchError as { code?: unknown }).code)
+              : null;
+          if (switchCode === 4902) {
+            await addExpectedChain();
+            await switchToExpectedChain();
+          } else {
+            notifyError(`Please switch MetaMask to ${EXPECTED_CHAIN_NAME} before voting.`);
+            return;
+          }
+        }
+        provider = new BrowserProvider((window as any).ethereum);
+      }
+
+      const deployedCode = await provider.getCode(contractAddress);
+      if (deployedCode === '0x') {
+        notifyError(`Voting contract was not found on ${EXPECTED_CHAIN_NAME}. Please contact admin.`);
+        return;
+      }
+
       const signer = await provider.getSigner();
       const abi = [
         'function castVote(uint256 _electionId, uint256 _candidateId) external',
@@ -270,16 +332,16 @@ const VotePage = () => {
         return;
       }
 
+      const preparedVote = await votesApi.prepareVote();
+      if (preparedVote.walletAddress.toLowerCase() !== signerAddress.toLowerCase()) {
+        notifyError('The approved wallet on your account does not match your active MetaMask account.');
+        return;
+      }
+
       const alreadyVotedOnChain = await contract.hasVoted(signerAddress, resolvedElectionId);
       if (alreadyVotedOnChain) {
         setVotedByElectionId((current) => ({ ...current, [position.id]: candidate.id }));
         notifyError(`This wallet has already voted for ${position.positionTitle ?? position.title}.`);
-        return;
-      }
-
-      const preparedVote = await votesApi.prepareVote();
-      if (preparedVote.walletAddress.toLowerCase() !== signerAddress.toLowerCase()) {
-        notifyError('The approved wallet on your account does not match your active MetaMask account.');
         return;
       }
 
@@ -307,7 +369,7 @@ const VotePage = () => {
         },
       });
     } catch (e) {
-      notifyError((e as Error).message);
+      notifyError(getVoteErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
