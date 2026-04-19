@@ -277,6 +277,12 @@ const VotePage = () => {
         return;
       }
 
+      const preparedVote = await votesApi.prepareVote();
+      if (preparedVote.walletAddress.toLowerCase() !== signerAddress.toLowerCase()) {
+        notifyError('The approved wallet on your account does not match your active MetaMask account.');
+        return;
+      }
+
       notifyInfo('Confirm the vote in your wallet.');
       const tx = await contract.castVote(resolvedElectionId, resolvedCandidateId);
       await tx.wait();

@@ -9,6 +9,19 @@ function maskWalletAddress(walletAddress?: string | null) {
 }
 
 export const votesController = {
+  async prepare(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' })
+      }
+      const result = await votesService.prepareVote(userId)
+      res.json(result)
+    } catch (e) {
+      res.status(400).json({ message: (e as Error).message })
+    }
+  },
+
   async cast(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.id

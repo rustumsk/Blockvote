@@ -146,7 +146,7 @@ const SuperAdminPage = () => {
                   <th className="px-4 py-3">User</th>
                   <th className="px-4 py-3">Current Role</th>
                   <th className="px-4 py-3">Organization</th>
-                  <th className="px-4 py-3">Global Election</th>
+                  <th className="px-4 py-3">Create Global</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
@@ -187,16 +187,20 @@ const SuperAdminPage = () => {
                       </select>
                     </td>
                     <td className="px-4 py-3">
-                      <label className="flex items-center gap-2 text-sm text-bv-ink-secondary">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(scopeGlobalByUser[u.id] ?? u.canCreateGlobalElections)}
-                          onChange={(e) =>
-                            setScopeGlobalByUser((prev) => ({ ...prev, [u.id]: e.target.checked }))
-                          }
-                        />
-                        Allowed
-                      </label>
+                      {u.role === 'ADMIN' ? (
+                        <label className="flex items-center gap-2 text-sm text-bv-ink-secondary">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(scopeGlobalByUser[u.id] ?? u.canCreateGlobalElections)}
+                            onChange={(e) =>
+                              setScopeGlobalByUser((prev) => ({ ...prev, [u.id]: e.target.checked }))
+                            }
+                          />
+                          Allowed
+                        </label>
+                      ) : (
+                        <span className="text-sm text-bv-ink-muted">Voter</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">

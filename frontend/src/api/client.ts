@@ -419,6 +419,13 @@ export const candidatesApi = {
 }
 
 export const votesApi = {
+  prepareVote() {
+    return api<{ walletAddress: string; approvedOnChain: boolean; repaired: boolean }>('/api/votes/prepare', {
+      method: 'POST',
+      token: getToken(),
+    })
+  },
+
   recordVote(body: { electionId: string; candidateId: string; txHash: string }) {
     return api<{
       message: string

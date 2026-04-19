@@ -3,7 +3,45 @@ import { getContract } from '../../config/contract'
 import { resultsService } from '../results/results.service'
 import { emitElectionResults } from '../../socket'
 
+async function isWalletApprovedOnChain(walletAddress: string) {
+  const contract = getContract()
+  if (!contract) throw new Error('Voting contract is not configured')
+
+  try {
+    const isApproved = await contract.getFunction('isVoterApproved')(walletAddress)
+    return Boolean(isApproved)
+  } catch {
+    const voter = await contract.getFunction('voters')(walletAddress)
+    if (Array.isArray(voter)) {
+      return Boolean(voter[0])
+    }
+    if (typeof voter === 'object' && voter != null && 'isApproved' in voter) {
+      return Boolean((voter as { isApproved?: boolean }).isApproved)
+    }
+    return false
+  }
+}
+
 export const votesService = {
+  async prepareVote(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw new Error('User not found')
+    if (user.status !== 'APPROVED') throw new Error('Only approved voters can vote')
+    if (!user.walletAddress) throw new Error('Wallet address is required to vote')
+
+    const contract = getContract()
+    if (!contract) throw new Error('Voting contract is not configured')
+
+    const approvedOnChain = await isWalletApprovedOnChain(user.walletAddress)
+    if (!approvedOnChain) {
+      const tx = await contract.getFunction('approveVoter')(user.walletAddress)
+      await tx.wait()
+      return { walletAddress: user.walletAddress, approvedOnChain: true, repaired: true }
+    }
+
+    return { walletAddress: user.walletAddress, approvedOnChain: true, repaired: false }
+  },
+
   async recordVote(userId: string, electionId: string, candidateId: string, txHash: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new Error('User not found')
