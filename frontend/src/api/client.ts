@@ -14,6 +14,7 @@ export type User = {
   id: string
   name: string
   email: string
+  idNumber?: string | null
   role: 'SUPERADMIN' | 'ADMIN' | 'VOTER'
   status: string
   walletAddress?: string | null
@@ -65,7 +66,15 @@ export async function api<T>(
 }
 
 export const authApi = {
-  register(body: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) {
+  register(body: {
+    name: string
+    email: string
+    password: string
+    phone?: string
+    walletAddress: string
+    organizationId: string
+    idNumber: string
+  }) {
     return api<{ message: string }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -73,7 +82,9 @@ export const authApi = {
   },
 
   verifyEmail(token: string) {
-    return api<{ message: string }>(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+    return api<{ message: string; autoApproved: boolean }>(
+      `/api/auth/verify-email?token=${encodeURIComponent(token)}`
+    )
   },
 
   login(body: { email: string; password: string }) {

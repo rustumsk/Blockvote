@@ -11,6 +11,7 @@ const VerifyEmailPage = () => {
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [autoApproved, setAutoApproved] = useState(false);
   const hasVerified = useRef(false);
 
   useEffect(() => {
@@ -29,7 +30,8 @@ const VerifyEmailPage = () => {
       .then((res) => {
         setStatus('success');
         setMessage(res.message);
-        notifySuccess('Email verified successfully.');
+        setAutoApproved(Boolean(res.autoApproved));
+        notifySuccess(res.autoApproved ? 'You are verified and approved.' : 'Email verified successfully.');
       })
       .catch((err) => {
         const errorMessage = err instanceof Error ? err.message : 'Verification failed';
@@ -57,7 +59,17 @@ const VerifyEmailPage = () => {
         tone="success"
         eyebrow="Verified"
         title="Your account is ready."
-        description={message}
+        description={
+          <>
+            <span>{message}</span>
+            {autoApproved ? (
+              <span className="mt-4 block rounded-2xl border border-bv-accent/25 bg-bv-accent-muted/30 px-4 py-3 text-sm text-bv-ink-secondary">
+                Your first vote request will finalize on-chain voter approval if the contract still
+                needs it.
+              </span>
+            ) : null}
+          </>
+        }
         icon={<MailCheck size={28} className="text-bv-accent" />}
         action={
           <Link to="/login">
