@@ -5,6 +5,7 @@ const userListSelect = {
   id: true,
   name: true,
   email: true,
+  idNumber: true,
   phone: true,
   role: true,
   status: true,

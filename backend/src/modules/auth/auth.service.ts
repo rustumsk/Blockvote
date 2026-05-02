@@ -4,6 +4,7 @@ import prisma from '../../config/db'
 import { getContract } from '../../config/contract'
 import { generateToken } from '../../utils/generateToken'
 import { sendVerificationEmail } from '../../utils/sendEmail'
+import { isEmailAndIdOnVoterRoll, normalizeIdNumber as normalizeStoredIdNumber } from '../../utils/voterRoll'
 
 const SALT_ROUNDS = 10
 const WALLET_LOGIN_NONCE_TTL_MS = 5 * 60 * 1000
@@ -18,6 +19,7 @@ const profileSelect = {
   status: true,
   canCreateGlobalElections: true,
   walletAddress: true,
+  idNumber: true,
   isVerified: true,
   createdAt: true,
   updatedAt: true,
@@ -72,7 +74,15 @@ async function isWalletApprovedOnChain(walletAddress: string) {
 }
 
 export const authService = {
-  async register(data: { name: string; email: string; password: string; phone?: string; walletAddress: string; organizationId: string }) {
+  async register(data: {
+    name: string
+    email: string
+    password: string
+    phone?: string
+    walletAddress: string
+    organizationId: string
+    idNumber: string
+  }) {
     const existing = await prisma.user.findUnique({ where: { email: data.email } })
     if (existing) throw new Error('Email already registered')
 
@@ -88,6 +98,9 @@ export const authService = {
     })
     if (!organization) throw new Error('Organization not found')
 
+    const normalizedIdNumber = normalizeStoredIdNumber(data.idNumber)
+    if (!normalizedIdNumber) throw new Error('ID number is required')
+
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS)
     const verifyToken = crypto.randomUUID()
 
@@ -101,6 +114,7 @@ export const authService = {
         status: 'PENDING',
         organizationId: data.organizationId,
         walletAddress: normalizedWalletAddress,
+        idNumber: normalizedIdNumber,
         isVerified: false,
         verifyToken,
       },
@@ -110,23 +124,33 @@ export const authService = {
     return { message: 'Verification email sent' }
   },
 
-  async verifyEmail(token: string) {
-    const result = await prisma.user.updateMany({
-      where: {
-        verifyToken: token,
-        isVerified: false
-      },
-      data: {
-        isVerified: true,
-        verifyToken: null
-      }
+  async verifyEmail(token: string): Promise<{ message: string; autoApproved: boolean }> {
+    const pending = await prisma.user.findFirst({
+      where: { verifyToken: token, isVerified: false },
+      select: { id: true, email: true, idNumber: true },
     })
 
-    if (result.count === 0) {
-      return { message: "Token already used or invalid" }
+    if (!pending) {
+      return { message: 'Token already used or invalid', autoApproved: false }
     }
 
-    return { message: "Email verified successfully" }
+    const idNorm = pending.idNumber?.trim()
+    const autoApproved = Boolean(idNorm && isEmailAndIdOnVoterRoll(pending.email, idNorm))
+
+    await prisma.user.update({
+      where: { id: pending.id },
+      data: {
+        isVerified: true,
+        verifyToken: null,
+        ...(autoApproved ? { status: 'APPROVED' as const } : {}),
+      },
+    })
+
+    const message = autoApproved
+      ? 'Email verified. Your email and ID are on the official voter roster — your account is approved to vote.'
+      : 'Email verified successfully. Your account is pending administrator approval before you can vote.'
+
+    return { message, autoApproved }
   },
 
   async login(email: string, password: string) {
