@@ -5,11 +5,33 @@ import { authService } from './auth.service'
 export const authController = {
   async register(req: AuthRequest, res: Response) {
     try {
-      const { name, email, password, phone, walletAddress, organizationId } = req.body
-      if (!name || !email || !password || !walletAddress || !organizationId) {
-        return res.status(400).json({ message: 'Name, email, password, walletAddress and organizationId are required' })
+      const { name, email, password, phone, walletAddress, organizationId, idNumber } = req.body
+      if (
+        !name ||
+        !email ||
+        !password ||
+        !walletAddress ||
+        !organizationId ||
+        idNumber === undefined ||
+        idNumber === null ||
+        String(idNumber).trim() === ''
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              'Name, email, password, walletAddress, organizationId and idNumber are required',
+          })
       }
-      const data = await authService.register({ name, email, password, phone, walletAddress, organizationId })
+      const data = await authService.register({
+        name,
+        email,
+        password,
+        phone,
+        walletAddress,
+        organizationId,
+        idNumber: String(idNumber),
+      })
       return res.status(201).json(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed'

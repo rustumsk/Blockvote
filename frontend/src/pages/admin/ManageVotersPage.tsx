@@ -12,6 +12,7 @@ interface Voter {
   id: string;
   name: string;
   email: string;
+  idNumber: string;
   wallet: string;
   status: VoterStatus;
   registered: string;
@@ -36,6 +37,7 @@ function toVoter(u: User): Voter {
     id: u.id,
     name: u.name,
     email: u.email,
+    idNumber: u.idNumber?.trim() ? u.idNumber : '—',
     wallet: u.walletAddress ? `${u.walletAddress.slice(0, 6)}...${u.walletAddress.slice(-4)}` : '—',
     status: status === 'pending' || status === 'approved' || status === 'rejected' ? status : 'pending',
     registered: formatDate(u.createdAt),
@@ -136,9 +138,11 @@ const ManageVotersPage = () => {
 
   const filtered = votersList.filter((v) => {
     const matchesTab = activeTab === 'all' || v.status === activeTab;
+    const q = search.toLowerCase();
     const matchesSearch =
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.email.toLowerCase().includes(search.toLowerCase());
+      v.name.toLowerCase().includes(q) ||
+      v.email.toLowerCase().includes(q) ||
+      (v.idNumber !== '—' && v.idNumber.toLowerCase().includes(q));
     return matchesTab && matchesSearch;
   });
 
@@ -185,7 +189,7 @@ const ManageVotersPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-bv-border">
-                  {['Name', 'Email', 'Role', 'Wallet Address', 'Status', 'Registered Date', 'Actions'].map((h) => (
+                  {['Name', 'Email', 'ID number', 'Role', 'Wallet Address', 'Status', 'Registered Date', 'Actions'].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-xs text-bv-ink-muted uppercase tracking-wide font-medium">
                       {h}
                     </th>
@@ -195,7 +199,7 @@ const ManageVotersPage = () => {
               <tbody className="divide-y divide-bv-border">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-bv-ink-secondary text-sm">
+                    <td colSpan={8} className="px-5 py-12 text-center text-bv-ink-secondary text-sm">
                       {votersList.length === 0 ? 'No voters yet.' : 'No voters match the current filters.'}
                     </td>
                   </tr>
@@ -216,6 +220,7 @@ const ManageVotersPage = () => {
                           <div className="text-xs text-bv-ink-muted">{voter.organizationName}</div>
                         )}
                       </td>
+                      <td className="px-5 py-4 text-bv-ink-secondary text-sm font-mono">{voter.idNumber}</td>
                       <td className="px-5 py-4 text-bv-ink-secondary text-sm">
                         {voter.role === 'SUPERADMIN' ? 'Superadmin' : voter.role === 'ADMIN' ? 'Admin' : 'Voter'}
                       </td>

@@ -10,6 +10,7 @@ model User {
   id            String   @id @default(uuid())
   name          String
   email         String   @unique
+  idNumber      String?
   password      String
   phone         String?
   role          Role     @default(VOTER)
