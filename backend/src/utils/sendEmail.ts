@@ -7,6 +7,33 @@ function maskEmailForLog(email: string) {
   return `${local.slice(0, 2)}***@${domain}`
 }
 
+/**
+ * Resend requires `email@example.com` or `Name <email@example.com>`.
+ * Fixes common env mistakes like `Blockvote ucblockvote@gmail.com` (missing brackets).
+ */
+function normalizeFromHeader(raw: string): string {
+  const s = raw.trim()
+  if (!s) return s
+
+  // `Name <email@domain>`
+  if (/^[\s\S]*<[^>\s]+@[^>\s]+>\s*$/.test(s)) return s.trim()
+
+  // plain `email@domain`
+  if (/^[^\s<>]+@[^\s<>]+$/.test(s)) return s
+
+  // `Display words email@domain` → `Display words <email@domain>`
+  const m = s.match(/^(.+?)\s+(\S+@\S+)$/)
+  if (m?.[1] && m[2]) {
+    const namePart = m[1].trim()
+    const emailPart = m[2].trim()
+    if (namePart && emailPart.includes('@')) {
+      return `${namePart} <${emailPart}>`
+    }
+  }
+
+  return s
+}
+
 function verificationHtml(verifyUrl: string) {
   return `
       <h2>Welcome to Blockvote</h2>
@@ -26,10 +53,15 @@ function verificationHtml(verifyUrl: string) {
 /** HTTPS API — works on hosts that block outbound SMTP (e.g. Render free web services). */
 async function sendVerificationViaResend(to: string, subject: string, html: string, maskedTo: string) {
   const apiKey = process.env.RESEND_API_KEY!.trim()
-  const from = process.env.RESEND_FROM?.trim() || process.env.MAIL_FROM?.trim()
-  if (!from) {
+  const rawFrom = process.env.RESEND_FROM?.trim() || process.env.MAIL_FROM?.trim()
+  if (!rawFrom) {
     console.error('[mail] resend:abort — set RESEND_FROM or MAIL_FROM for the sender address')
     throw new Error('RESEND_FROM or MAIL_FROM is required when using RESEND_API_KEY')
+  }
+
+  const from = normalizeFromHeader(rawFrom)
+  if (from !== rawFrom) {
+    console.log('[mail] from-header normalized for Resend (was missing <…> around address)')
   }
 
   console.log('[mail] verification:transport', { mode: 'resend-https', to: maskedTo })
@@ -114,7 +146,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 
   try {
     const info = await transporter.sendMail({
-      from,
+      from: normalizeFromHeader(from.trim()),
       to: trimmedEmail,
       subject,
       html,

@@ -54,6 +54,12 @@ function maskEmail(email: string) {
   return `${localPart.slice(0, 2)}***@${domain}`
 }
 
+/** When true, new voters are verified without email; login skips verification checks. See SKIP_EMAIL_VERIFICATION in README. */
+function isEmailVerificationSkipped() {
+  const v = process.env.SKIP_EMAIL_VERIFICATION?.trim().toLowerCase()
+  return v === 'true' || v === '1' || v === 'yes'
+}
+
 async function isWalletApprovedOnChain(walletAddress: string) {
   const contract = getContract()
   if (!contract) throw new Error('Voting contract is not configured')
@@ -102,7 +108,8 @@ export const authService = {
     if (!normalizedIdNumber) throw new Error('ID number is required')
 
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS)
-    const verifyToken = crypto.randomUUID()
+    const skipVerify = isEmailVerificationSkipped()
+    const verifyToken = skipVerify ? null : crypto.randomUUID()
 
     await prisma.user.create({
       data: {
@@ -115,19 +122,25 @@ export const authService = {
         organizationId: data.organizationId,
         walletAddress: normalizedWalletAddress,
         idNumber: normalizedIdNumber,
-        isVerified: false,
+        isVerified: skipVerify,
         verifyToken,
       },
     })
 
-    console.log('[auth] register:queue-verification-email', { email: maskEmail(data.email) })
-    void sendVerificationEmail(data.email, verifyToken).catch((err) => {
-      console.error('[auth] verification email failed after register', err)
-    })
+    if (!skipVerify && verifyToken) {
+      console.log('[auth] register:queue-verification-email', { email: maskEmail(data.email) })
+      void sendVerificationEmail(data.email, verifyToken).catch((err) => {
+        console.error('[auth] verification email failed after register', err)
+      })
+    } else {
+      console.log('[auth] register:skip-email-verification', { email: maskEmail(data.email) })
+    }
 
     return {
-      message:
-        'Account created. Check your inbox for a verification link before signing in. If nothing arrives in a few minutes, use “Resend verification” on the login page.',
+      message: skipVerify
+        ? 'Account created. Email verification is disabled on this server—you can sign in now. Your account is still pending administrator approval before you can vote.'
+        : 'Account created. Check your inbox for a verification link before signing in. If nothing arrives in a few minutes, use “Resend verification” on the login page.',
+      emailVerificationSkipped: skipVerify,
     }
   },
 
@@ -135,6 +148,13 @@ export const authService = {
    * Sends a new verification link. Response is generic so email existence is not leaked.
    */
   async resendVerificationEmail(email: string) {
+    if (isEmailVerificationSkipped()) {
+      return {
+        message:
+          'Email verification is disabled on this server. Sign in with your email and password or your wallet if you already registered.',
+      }
+    }
+
     const trimmed = email.trim()
     const generic = {
       message:
@@ -206,7 +226,9 @@ export const authService = {
     const match = await bcrypt.compare(password, user.password)
     if (!match) throw new Error('Invalid email or password')
 
-    if (!user.isVerified) throw new Error('Please verify your email before logging in')
+    if (!isEmailVerificationSkipped() && !user.isVerified) {
+      throw new Error('Please verify your email before logging in')
+    }
 
     const token = generateToken(user.id, user.role)
     return {
@@ -233,7 +255,9 @@ export const authService = {
     })
 
     if (!user) throw new Error('No account is linked to this wallet')
-    if (!user.isVerified) throw new Error('Please verify your email before logging in')
+    if (!isEmailVerificationSkipped() && !user.isVerified) {
+      throw new Error('Please verify your email before logging in')
+    }
 
     const nonce = crypto.randomUUID()
     walletLoginNonces.set(normalizedWalletAddress.toLowerCase(), {
@@ -269,7 +293,7 @@ export const authService = {
     return {
       walletAddress: normalizedWalletAddress,
       isRegistered: true,
-      isVerified: user.isVerified,
+      isVerified: user.isVerified || isEmailVerificationSkipped(),
       status: user.status,
       maskedEmail: maskEmail(user.email),
     }
@@ -282,7 +306,9 @@ export const authService = {
       include: { organization: { select: { id: true, name: true } } },
     })
     if (!user) throw new Error('No account is linked to this wallet')
-    if (!user.isVerified) throw new Error('Please verify your email before logging in')
+    if (!isEmailVerificationSkipped() && !user.isVerified) {
+      throw new Error('Please verify your email before logging in')
+    }
 
     const nonceRecord = walletLoginNonces.get(normalizedWalletAddress.toLowerCase())
     if (!nonceRecord || nonceRecord.expiresAt < Date.now()) {

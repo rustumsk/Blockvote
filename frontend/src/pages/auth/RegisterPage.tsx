@@ -37,7 +37,9 @@ const RegisterPage = () => {
   const [idNumber, setIdNumber] = useState('');
   const [organizationId, setOrganizationId] = useState('');
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [success, setSuccess] = useState(false);
+  const [registerDone, setRegisterDone] = useState<{ emailVerificationSkipped: boolean } | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(() => getPendingWallet());
   const [connectingWallet, setConnectingWallet] = useState(false);
@@ -157,7 +159,7 @@ const RegisterPage = () => {
 
     setSubmitting(true);
     try {
-      await register({
+      const res = await register({
         name: name.trim(),
         email: email.trim(),
         password,
@@ -167,8 +169,8 @@ const RegisterPage = () => {
         idNumber: idNumber.trim(),
       });
       clearPendingWallet();
-      setSuccess(true);
-      notifySuccess('Registration successful. Check your email to verify your account.');
+      setRegisterDone({ emailVerificationSkipped: Boolean(res.emailVerificationSkipped) });
+      notifySuccess(res.message);
       window.setTimeout(() => navigate('/login', { replace: true }), 2500);
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'Registration failed');
@@ -177,17 +179,26 @@ const RegisterPage = () => {
     }
   };
 
-  if (success) {
+  if (registerDone) {
+    const skipped = registerDone.emailVerificationSkipped;
     return (
       <AuthStatusScreen
         tone="success"
-        eyebrow="Verification Sent"
-        title="Check your inbox."
+        eyebrow={skipped ? 'Account created' : 'Verification sent'}
+        title={skipped ? 'You can sign in now.' : 'Check your inbox.'}
         description={
-          <>
-            We sent a verification link to <strong className="text-white">{email}</strong>. Open
-            it to activate your account, then return here to sign in.
-          </>
+          skipped ? (
+            <>
+              Email verification is turned off on this server. You may sign in with{' '}
+              <strong className="text-white">{email}</strong> once you are redirected. Your account
+              still needs administrator approval before you can vote.
+            </>
+          ) : (
+            <>
+              We sent a verification link to <strong className="text-white">{email}</strong>. Open
+              it to activate your account, then return here to sign in.
+            </>
+          )
         }
         note="Redirecting you to login..."
         icon={<CheckCircle2 size={28} className="text-bv-accent" />}

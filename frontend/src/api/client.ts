@@ -75,7 +75,7 @@ export const authApi = {
     organizationId: string
     idNumber: string
   }) {
-    return api<{ message: string }>('/api/auth/register', {
+    return api<{ message: string; emailVerificationSkipped?: boolean }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
     })

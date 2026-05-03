@@ -20,7 +20,7 @@ type AuthContextValue = {
     walletAddress: string
     organizationId: string
     idNumber: string
-  }) => Promise<void>
+  }) => Promise<{ message: string; emailVerificationSkipped?: boolean }>
   refreshUser: () => Promise<User | null>
   logout: () => void
   setUser: (user: User | null) => void
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       organizationId: string
       idNumber: string
     }) => {
-      await authApi.register(data)
+      return authApi.register(data)
     },
     []
   )

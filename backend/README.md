@@ -99,6 +99,16 @@ RESEND_API_KEY=re_xxxxxxxx
 
 When `RESEND_API_KEY` is set, verification email uses the [Resend](https://resend.com) API instead of SMTP (`MAIL_HOST` is ignored for that path). Verify your sending domain (or use Resend’s onboarding sender per their docs).
 
+### Disable email verification
+
+For local demos or hosts where outbound mail is blocked, you can turn verification off:
+
+```txt
+SKIP_EMAIL_VERIFICATION=true
+```
+
+When set, new registrations are stored as verified, no verification email is queued, and login (password or wallet) does not require a verified email. Existing accounts that were never verified can also sign in while this flag is on. **Do not use for real elections**—it removes email confirmation as a control.
+
 ## S3 Candidate Photo Environment
 
 Candidate photo upload is optional. If an admin uploads a candidate photo, these must be configured:
