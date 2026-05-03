@@ -7,6 +7,7 @@ import {
   Lock,
   Mail,
   Phone,
+  Hash,
   User,
   Wallet,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ const RegisterPage = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [idNumber, setIdNumber] = useState('');
   const [organizationId, setOrganizationId] = useState('');
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [success, setSuccess] = useState(false);
@@ -136,6 +138,10 @@ const RegisterPage = () => {
       notifyError('Connect your wallet before registering.');
       return;
     }
+    if (!idNumber.trim()) {
+      notifyError('ID number is required.');
+      return;
+    }
     if (!organizationId) {
       notifyError('Please choose your organization.');
       return;
@@ -158,6 +164,7 @@ const RegisterPage = () => {
         phone: phone.trim() || undefined,
         walletAddress,
         organizationId,
+        idNumber: idNumber.trim(),
       });
       clearPendingWallet();
       setSuccess(true);
@@ -243,7 +250,7 @@ const RegisterPage = () => {
       eyebrow="Create Account"
       title="Set up a voter profile with a linked wallet."
       description="Registration starts with identity details and the wallet you'll use later for approval checks and ballot signing."
-      asideNote="Admin approval still happens after signup, but the account and wallet are connected from the beginning."
+      asideNote="After you verify your email, we match your email and ID to the official roster. If both match, you are approved automatically; otherwise an admin reviews your account."
     >
       <div className="max-w-xl">
         <p className="text-sm text-bv-ink-secondary">
@@ -316,6 +323,15 @@ const RegisterPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+            />
+            <Input
+              label="ID number"
+              type="text"
+              placeholder="As on your official voter list (e.g. student or national ID)"
+              icon={<Hash size={15} />}
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              autoComplete="off"
             />
             <Input
               label="Phone"
@@ -406,7 +422,8 @@ const RegisterPage = () => {
                 >
                   Privacy Policy
                 </Link>
-                . I understand my account must be approved before I can vote.
+                . I understand that if my email and ID are not on the official roster I must be
+                approved by an administrator before I can vote.
               </span>
             </label>
 
