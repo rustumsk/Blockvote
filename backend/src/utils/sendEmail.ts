@@ -1,6 +1,7 @@
-import transporter from '../config/mailer'
+import { getMailer } from '../config/mailer'
 
 export const sendVerificationEmail = async (email: string, token: string) => {
+  const transporter = await getMailer()
   const frontendUrl = process.env.FRONTEND_URL
   const verifyUrl = frontendUrl
     ? `${frontendUrl.replace(/\/$/, '')}/verify-email?token=${token}`

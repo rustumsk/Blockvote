@@ -248,6 +248,9 @@ export function getCandidatePhotoSrc(candidate: Pick<Candidate, 'id' | 'election
 
 export type ElectionDetail = ElectionListItem & {
   candidates: Candidate[]
+  /** Set for elections that are positions inside a group (matches API / Prisma). */
+  positionTitle?: string | null
+  positionOrder?: number
 }
 
 export type ElectionPosition = ElectionDetail & {
