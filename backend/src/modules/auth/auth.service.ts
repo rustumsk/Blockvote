@@ -120,6 +120,7 @@ export const authService = {
       },
     })
 
+    console.log('[auth] register:queue-verification-email', { email: maskEmail(data.email) })
     void sendVerificationEmail(data.email, verifyToken).catch((err) => {
       console.error('[auth] verification email failed after register', err)
     })
@@ -158,6 +159,7 @@ export const authService = {
       data: { verifyToken: newToken },
     })
 
+    console.log('[auth] resend:queue-verification-email', { email: maskEmail(user.email) })
     void sendVerificationEmail(user.email, newToken).catch((err) => {
       console.error('[auth] resend verification email failed', err)
     })

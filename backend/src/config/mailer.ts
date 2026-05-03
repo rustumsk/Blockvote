@@ -25,9 +25,26 @@ async function createTransporter(): Promise<nodemailer.Transporter> {
       const { address } = await dns.lookup(originalHost, { family: 4 })
       host = address
       servername = originalHost
+      console.log('[mailer] transport:ipv4-resolved', {
+        logicalHost: originalHost,
+        connectHost: host,
+        port,
+        servername,
+      })
     } catch (err) {
       console.warn('[mailer] MAIL_FORCE_IPV4: IPv4 lookup failed, using hostname', err)
     }
+  }
+
+  if (!(forceIpv4 && servername)) {
+    console.log('[mailer] transport:config', {
+      connectHost: host,
+      port,
+      forceIpv4,
+      servername: servername ?? null,
+      mailUserSet: Boolean(process.env.MAIL_USER?.trim()),
+      mailPassSet: Boolean(process.env.MAIL_PASS?.trim()),
+    })
   }
 
   return nodemailer.createTransport({
