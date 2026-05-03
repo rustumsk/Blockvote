@@ -89,6 +89,16 @@ MAIL_FROM=Blockvote <your-email@example.com>
 
 For Gmail, use an app password, not the normal account password.
 
+**Render free web services** block outbound SMTP (ports 25, 465, 587), which shows up as `ETIMEDOUT` / `CONN` in logs. Either upgrade to a paid instance or send mail over HTTPS:
+
+```txt
+RESEND_API_KEY=re_xxxxxxxx
+# Optional if MAIL_FROM is already a domain verified in Resend:
+# RESEND_FROM=Blockvote <verify@yourdomain.com>
+```
+
+When `RESEND_API_KEY` is set, verification email uses the [Resend](https://resend.com) API instead of SMTP (`MAIL_HOST` is ignored for that path). Verify your sending domain (or use Resend’s onboarding sender per their docs).
+
 ## S3 Candidate Photo Environment
 
 Candidate photo upload is optional. If an admin uploads a candidate photo, these must be configured:
