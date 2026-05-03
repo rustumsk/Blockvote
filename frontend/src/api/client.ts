@@ -87,6 +87,13 @@ export const authApi = {
     )
   },
 
+  resendVerification(email: string) {
+    return api<{ message: string }>('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  },
+
   login(body: { email: string; password: string }) {
     return api<{ token: string; user: User }>('/api/auth/login', {
       method: 'POST',

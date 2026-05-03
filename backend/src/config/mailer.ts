@@ -33,6 +33,8 @@ async function createTransporter(): Promise<nodemailer.Transporter> {
   return nodemailer.createTransport({
     host,
     port,
+    connectionTimeout: 25_000,
+    greetingTimeout: 20_000,
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASS,

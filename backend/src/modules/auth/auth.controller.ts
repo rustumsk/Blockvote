@@ -48,6 +48,20 @@ export const authController = {
     }
   },
 
+  async resendVerification(req: AuthRequest, res: Response) {
+    try {
+      const { email } = req.body as { email?: string }
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: 'Email is required' })
+      }
+      const data = await authService.resendVerificationEmail(email)
+      return res.json(data)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Request failed'
+      return res.status(500).json({ message })
+    }
+  },
+
   async verifyEmail(req: AuthRequest, res: Response) {
     try {
       const token = req.query.token as string

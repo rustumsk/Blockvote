@@ -120,8 +120,49 @@ export const authService = {
       },
     })
 
-    await sendVerificationEmail(data.email, verifyToken)
-    return { message: 'Verification email sent' }
+    void sendVerificationEmail(data.email, verifyToken).catch((err) => {
+      console.error('[auth] verification email failed after register', err)
+    })
+
+    return {
+      message:
+        'Account created. Check your inbox for a verification link before signing in. If nothing arrives in a few minutes, use “Resend verification” on the login page.',
+    }
+  },
+
+  /**
+   * Sends a new verification link. Response is generic so email existence is not leaked.
+   */
+  async resendVerificationEmail(email: string) {
+    const trimmed = email.trim()
+    const generic = {
+      message:
+        'If that email has an unverified account, a new verification link is on the way. Check your inbox and spam folder.',
+    }
+    if (!trimmed) {
+      return generic
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: trimmed, mode: 'insensitive' } },
+      select: { id: true, email: true, isVerified: true, role: true },
+    })
+
+    if (!user || user.isVerified || user.role !== 'VOTER') {
+      return generic
+    }
+
+    const newToken = crypto.randomUUID()
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { verifyToken: newToken },
+    })
+
+    void sendVerificationEmail(user.email, newToken).catch((err) => {
+      console.error('[auth] resend verification email failed', err)
+    })
+
+    return generic
   },
 
   async verifyEmail(token: string): Promise<{ message: string; autoApproved: boolean }> {

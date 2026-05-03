@@ -14,6 +14,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
   const [walletSubmitting, setWalletSubmitting] = useState(false);
   const { login, loginWithWallet, user, token, loading } = useAuth();
   const navigate = useNavigate();
@@ -41,6 +42,22 @@ const LoginPage = () => {
       notifyError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      notifyError('Enter your email above first.');
+      return;
+    }
+    setResending(true);
+    try {
+      const { message } = await authApi.resendVerification(email.trim());
+      notifySuccess(message);
+    } catch (err) {
+      notifyError(err instanceof Error ? err.message : 'Could not resend email');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -142,6 +159,18 @@ const LoginPage = () => {
               {submitting ? 'Signing in...' : 'Sign in'}
               {!submitting ? <ArrowRight size={16} /> : null}
             </Button>
+
+            <p className="text-center text-xs text-bv-ink-muted">
+              Didn&apos;t get a verification email after registering?{' '}
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resending}
+                className="font-medium text-bv-accent underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {resending ? 'Sending…' : 'Resend verification link'}
+              </button>
+            </p>
           </form>
 
           <div className="auth-divider my-6">
