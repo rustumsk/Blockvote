@@ -19,6 +19,11 @@ import {
 } from '../../api/client';
 import { subscribeToElectionResults } from '../../lib/resultsSocket';
 import { notifyError, notifySuccess } from '../../lib/toast';
+import {
+  DEFAULT_BANNER_ACCENT_HEX,
+  DEFAULT_BANNER_BG_HEX,
+  hexToRgb,
+} from '../../lib/campaignBannerColors';
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -47,6 +52,9 @@ const ElectionDetailPage = () => {
   const [addName, setAddName] = useState('');
   const [addDescription, setAddDescription] = useState('');
   const [addCredentials, setAddCredentials] = useState('');
+  const [addPlatform, setAddPlatform] = useState('');
+  const [bannerBgHex, setBannerBgHex] = useState(DEFAULT_BANNER_BG_HEX);
+  const [bannerAccentHex, setBannerAccentHex] = useState(DEFAULT_BANNER_ACCENT_HEX);
   const [addPhoto, setAddPhoto] = useState<File | null>(null);
   const [addPhotoPreview, setAddPhotoPreview] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
@@ -120,17 +128,25 @@ const ElectionDetailPage = () => {
     setAddLoading(true);
     setAddError(null);
     try {
+      const bgRgb = hexToRgb(bannerBgHex) ?? hexToRgb(DEFAULT_BANNER_BG_HEX)!;
+      const accentRgb = hexToRgb(bannerAccentHex) ?? hexToRgb(DEFAULT_BANNER_ACCENT_HEX)!;
       await candidatesApi.create(selectedPosition.id, {
         name: addName.trim(),
         description: addDescription.trim() || undefined,
+        platform: addPlatform.trim() || undefined,
         credentials: addCredentials.trim() || undefined,
         photo: addPhoto,
+        bannerBg: bgRgb,
+        bannerAccent: accentRgb,
       });
       await refreshGroup();
       setShowAddCandidate(false);
       setAddName('');
       setAddDescription('');
       setAddCredentials('');
+      setAddPlatform('');
+      setBannerBgHex(DEFAULT_BANNER_BG_HEX);
+      setBannerAccentHex(DEFAULT_BANNER_ACCENT_HEX);
       setAddPhoto(null);
       if (addPhotoPreview) {
         URL.revokeObjectURL(addPhotoPreview);
@@ -156,6 +172,9 @@ const ElectionDetailPage = () => {
     setAddName('');
     setAddDescription('');
     setAddCredentials('');
+    setAddPlatform('');
+    setBannerBgHex(DEFAULT_BANNER_BG_HEX);
+    setBannerAccentHex(DEFAULT_BANNER_ACCENT_HEX);
     setAddPhoto(null);
     setAddPhotoPreview(null);
   };
@@ -334,6 +353,12 @@ const ElectionDetailPage = () => {
                           {c.credentials}
                         </p>
                       )}
+                      {c.platform && (
+                        <p className="mt-2 text-bv-ink-secondary text-sm leading-relaxed line-clamp-2">
+                          <span className="font-semibold text-bv-ink">Platform: </span>
+                          {c.platform}
+                        </p>
+                      )}
                       {c.description && <p className="mt-2 text-bv-ink-secondary text-sm leading-relaxed">{c.description}</p>}
                     </div>
                   </div>
@@ -419,6 +444,18 @@ const ElectionDetailPage = () => {
               />
             </div>
             <div>
+              <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">
+                Platform / services (optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Campaign promises, key issues, or services you would deliver"
+                className="bg-bv-surface border border-bv-border rounded-lg px-4 py-3 text-bv-ink placeholder-bv-ink-muted focus:border-bv-accent focus:outline-none w-full resize-none text-sm"
+                value={addPlatform}
+                onChange={(e) => setAddPlatform(e.target.value)}
+              />
+            </div>
+            <div>
               <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Credentials</label>
               <textarea
                 rows={2}
@@ -427,6 +464,40 @@ const ElectionDetailPage = () => {
                 value={addCredentials}
                 onChange={(e) => setAddCredentials(e.target.value)}
               />
+            </div>
+            <div>
+              <p className="mb-2 text-xs text-bv-ink-muted uppercase tracking-wide">Public profile banner</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[11px] text-bv-ink-secondary mb-1.5">Background (RGB)</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={bannerBgHex}
+                      onChange={(e) => setBannerBgHex(e.target.value)}
+                      className="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-bv-border bg-bv-surface p-1"
+                      aria-label="Banner background color"
+                    />
+                    <span className="font-mono text-xs text-bv-ink-secondary">{bannerBgHex}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-bv-ink-secondary mb-1.5">Accent (RGB)</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={bannerAccentHex}
+                      onChange={(e) => setBannerAccentHex(e.target.value)}
+                      className="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-bv-border bg-bv-surface p-1"
+                      aria-label="Banner accent color"
+                    />
+                    <span className="font-mono text-xs text-bv-ink-secondary">{bannerAccentHex}</span>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-bv-ink-muted">
+                Shown on the candidate&apos;s public poster-style page (decorative shapes and headline emphasis).
+              </p>
             </div>
             <div>
               <label className="block text-xs text-bv-ink-muted uppercase tracking-wide mb-1.5">Candidate Photo</label>

@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/client';
 import { notifyError, notifySuccess } from '../../lib/toast';
+import { formatRoleLabel } from '../../lib/roleLabels';
 
 const AdminSettingsPage = () => {
   const { user, setUser, logout } = useAuth();
@@ -101,7 +102,7 @@ const AdminSettingsPage = () => {
                     </p>
                     <div className="mt-2 flex items-center gap-2 text-sm font-medium text-bv-ink">
                       <Shield size={15} className="text-bv-accent" />
-                      {user.role}
+                      {formatRoleLabel(user.role)}
                     </div>
                   </div>
                   <div className="rounded-2xl border border-bv-border bg-bv-bg px-4 py-3">

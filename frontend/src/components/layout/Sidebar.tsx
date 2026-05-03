@@ -134,7 +134,9 @@ const Sidebar: React.FC<SidebarProps> = ({ variant = 'voter' }) => {
             </div>
             {variant === 'admin' ? (
               <span className={`mt-0.5 block transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-                <Badge variant="admin">Admin</Badge>
+                <Badge variant="admin">
+                  {user?.role === 'SUPERADMIN' ? 'Super Admin' : 'Admin'}
+                </Badge>
               </span>
             ) : (
               <div className={`truncate font-mono text-[10px] text-bv-ink-muted transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>

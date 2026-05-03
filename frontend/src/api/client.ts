@@ -225,6 +225,15 @@ export type Candidate = {
   id: string
   name: string
   description?: string | null
+  /** Campaign platform / services (off-chain profile). */
+  platform?: string | null
+  /** Per-candidate public banner colors (0–255); omit for default theme. */
+  bannerBgR?: number | null
+  bannerBgG?: number | null
+  bannerBgB?: number | null
+  bannerAccentR?: number | null
+  bannerAccentG?: number | null
+  bannerAccentB?: number | null
   credentials?: string | null
   photoUrl?: string | null
   electionId: string
@@ -413,12 +422,31 @@ export const candidatesApi = {
 
   create(
     electionId: string,
-    body: { name: string; description?: string; credentials?: string; photo?: File | null }
+    body: {
+      name: string
+      description?: string
+      platform?: string
+      credentials?: string
+      photo?: File | null
+      bannerBg?: { r: number; g: number; b: number }
+      bannerAccent?: { r: number; g: number; b: number }
+    }
   ) {
     const formData = new FormData()
     formData.append('name', body.name)
     if (body.description) formData.append('description', body.description)
+    if (body.platform) formData.append('platform', body.platform)
     if (body.credentials) formData.append('credentials', body.credentials)
+    if (body.bannerBg) {
+      formData.append('bannerBgR', String(body.bannerBg.r))
+      formData.append('bannerBgG', String(body.bannerBg.g))
+      formData.append('bannerBgB', String(body.bannerBg.b))
+    }
+    if (body.bannerAccent) {
+      formData.append('bannerAccentR', String(body.bannerAccent.r))
+      formData.append('bannerAccentG', String(body.bannerAccent.g))
+      formData.append('bannerAccentB', String(body.bannerAccent.b))
+    }
     if (body.photo) formData.append('photo', body.photo)
 
     return api<Candidate>(`/api/elections/${electionId}/candidates`, {

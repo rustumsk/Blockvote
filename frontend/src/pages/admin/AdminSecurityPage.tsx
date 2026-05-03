@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
   FileText,
+  Info,
   KeyRound,
   LockKeyhole,
   MailCheck,
@@ -10,6 +11,9 @@ import {
   Wallet,
 } from 'lucide-react';
 import Sidebar from '../../components/layout/Sidebar';
+import { useAuth } from '../../context/AuthContext';
+import { formatRoleLabel } from '../../lib/roleLabels';
+import { ROLE_TRANSPARENCY_CARDS } from '../../content/roleTransparency';
 
 const controls = [
   {
@@ -79,6 +83,8 @@ const operationalChecks = [
 ];
 
 export default function AdminSecurityPage() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-bv-bg flex">
       <Sidebar variant="admin" />
@@ -97,6 +103,60 @@ export default function AdminSecurityPage() {
             <p className="mt-1 text-sm font-semibold text-emerald-200">{controls.length} enabled</p>
           </div>
         </div>
+
+        <section className="mb-10 rounded-xl border border-white/10 bg-white/[0.02] p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-bv-accent">
+                <Info size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-bv-ink">Role transparency</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-7 text-bv-ink-secondary">
+                  Super Admin, Admin, and Voter are separate privilege levels. The backend enforces what each role can
+                  see and change so responsibilities stay clear for security and accountability.
+                </p>
+              </div>
+            </div>
+            {user && (
+              <div className="rounded-xl border border-bv-accent/20 bg-bv-accent-muted/15 px-4 py-3 text-sm md:text-right">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-bv-ink-muted">Your session</p>
+                <p className="mt-1 font-medium text-bv-ink">
+                  Signed in as <span className="text-bv-accent">{formatRoleLabel(user.role)}</span>
+                </p>
+                {user.role === 'ADMIN' && (
+                  <p className="mt-1 text-xs text-bv-ink-secondary">Organization-scoped admin access.</p>
+                )}
+                {user.role === 'SUPERADMIN' && (
+                  <p className="mt-1 text-xs text-bv-ink-secondary">Full role-assignment and cross-org management.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {ROLE_TRANSPARENCY_CARDS.map(({ id, title, icon: Icon, borderClass, iconWrapClass, bullets }) => (
+              <article
+                key={id}
+                className={`flex flex-col rounded-xl border bg-black/20 p-5 ${borderClass}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl border ${iconWrapClass}`}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="text-base font-semibold text-bv-ink">{title}</h3>
+                </div>
+                <ul className="mt-4 list-disc space-y-2.5 pl-4 text-sm leading-6 text-bv-ink-secondary">
+                  {bullets.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="mb-8 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {controls.map(({ icon: Icon, title, status, description, evidence }) => (

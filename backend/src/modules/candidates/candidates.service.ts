@@ -24,7 +24,14 @@ export const candidatesService = {
     data: {
       name: string
       description?: string | null
+      platform?: string | null
       credentials?: string | null
+      bannerBgR?: number | null
+      bannerBgG?: number | null
+      bannerBgB?: number | null
+      bannerAccentR?: number | null
+      bannerAccentG?: number | null
+      bannerAccentB?: number | null
       photoFile?: UploadedPhotoFile
     }
   ) {
@@ -90,7 +97,14 @@ export const candidatesService = {
       data: {
         name: data.name.trim(),
         description: data.description?.trim() || null,
+        platform: data.platform?.trim() || null,
         credentials: data.credentials?.trim() || null,
+        bannerBgR: data.bannerBgR ?? null,
+        bannerBgG: data.bannerBgG ?? null,
+        bannerBgB: data.bannerBgB ?? null,
+        bannerAccentR: data.bannerAccentR ?? null,
+        bannerAccentG: data.bannerAccentG ?? null,
+        bannerAccentB: data.bannerAccentB ?? null,
         photoUrl: uploadedPhoto?.url || null,
         electionId,
         contractCandidateId,

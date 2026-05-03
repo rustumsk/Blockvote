@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, HelpCircle, Mail, Search, Shield, Wallet } from 'lucide-react';
+import { CheckCircle2, HelpCircle, Mail, Search, Shield, Users, Wallet } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 
@@ -79,6 +79,22 @@ const faqs = [
       {
         question: 'What should I do if MetaMask fails?',
         answer: 'Check that your wallet is unlocked, connected to the correct network, and has enough test ETH for transaction fees, then try again.',
+      },
+    ],
+  },
+  {
+    category: 'Roles & access',
+    icon: Users,
+    items: [
+      {
+        question: 'What is the difference between Super Admin, Admin, and Voter?',
+        answer:
+          'Voters use the voter portal to participate in elections. Admins operate an organization-scoped admin area to run elections and approve voters in their organization. A Super Admin can assign those roles and manage cross-organization administration. Signed-in administrators can open Security in the admin panel for the full role breakdown.',
+      },
+      {
+        question: 'Who can approve my voter account?',
+        answer:
+          'An administrator for your organization reviews pending registrations. Super Admin accounts exist for system-wide administration and are not involved in routine voter approval unless your deployment assigns that responsibility differently.',
       },
     ],
   },

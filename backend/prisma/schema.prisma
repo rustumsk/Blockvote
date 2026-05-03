@@ -80,6 +80,16 @@ model Candidate {
   id                  String   @id @default(uuid())
   name                String
   description         String?
+  /** Campaign platform / services — stored off-chain (not on voting contract). */
+  platform            String?
+  /** Public profile banner background RGB (0–255); null = default theme. */
+  bannerBgR           Int?
+  bannerBgG           Int?
+  bannerBgB           Int?
+  /** Banner accent RGB (decorative blob, badge, headline line); null = default. */
+  bannerAccentR       Int?
+  bannerAccentG       Int?
+  bannerAccentB       Int?
   electionId          String
   contractCandidateId Int?
   createdAt           DateTime @default(now())
